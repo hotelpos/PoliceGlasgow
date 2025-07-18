@@ -31,7 +31,7 @@
   </div>
 
   <div id="mainGame" style="display: none;">
-    <h1 class="text-3xl font-bold mb-4">PoliceGlasgow: Case Files</h1>
+    <h1 class="text-3xl font-bold mb-4">PoliceGlasgow: Case Files <span id="caseCounter"></span></h1>
     <div class="bg-gray-800 p-4 rounded mb-4">
       <h2 class="text-xl font-semibold mb-2">Case Details</h2>
       <div id="caseDetails" class="text-sm font-mono"></div>
@@ -46,6 +46,10 @@
         <div id="radioLog" class="text-sm font-mono"></div>
       </div>
       <div class="bg-gray-800 p-4 rounded">
+        <h2 class="text-xl font-semibold mb-2">🔫 Weapon Log</h2>
+        <div id="weaponLog" class="text-sm font-mono">Weapon recovered: Kitchen knife (found near crime scene).</div>
+      </div>
+      <div class="bg-gray-800 p-4 rounded">
         <h2 class="text-xl font-semibold mb-2">👥 Witness Statements</h2>
         <div id="witnessStatements" class="text-sm"></div>
       </div>
@@ -54,67 +58,59 @@
         <div id="suspects" class="text-sm grid gap-2"></div>
       </div>
     </div>
+    <div class="mt-6">
+      <button onclick="convictCase()" class="bg-green-600 px-6 py-3 rounded text-white">Convict</button>
+    </div>
+  </div>
+
+  <div id="popupModal" class="modal-bg" style="display: none;">
+    <div class="bg-gray-900 p-6 rounded shadow-lg w-full max-w-md">
+      <h2 id="popupTitle" class="text-xl font-bold mb-4"></h2>
+      <p id="popupContent" class="mb-4"></p>
+      <button onclick="closePopup()" class="bg-blue-600 px-4 py-2 rounded">OK</button>
+    </div>
   </div>
 
   <script>
-    const caseTemplates = [
-      {
-        id: () => `G-${Math.floor(Math.random() * 10000)}`,
-        summary: 'Reported burglary at Kelvingrove Convenience Store. Alarm triggered at 02:42. Security footage confirms forced entry.',
-        description: 'Upon arrival, rear window was broken. Blood samples and a muddy footprint were recovered. Suspects fled on foot. No eyewitness of the suspect\'s face, but description of clothing provided.',
-        radio: 'Dispatch to unit, Code 45 in progress at Kelvingrove Market. Proceed with caution.',
-        evidence: [
-          { item: 'CCTV footage at 02:42 AM', image: 'https://via.placeholder.com/150?text=CCTV+Footage' },
-          { item: 'Blood sample (collected)', image: 'https://via.placeholder.com/150?text=Blood+Sample' },
-          { item: 'Mud footprint at rear exit', image: 'https://via.placeholder.com/150?text=Footprint' }
-        ],
-        witnesses: [
-          'Shopkeeper: "Alarm call woke me up. I found the door smashed in."',
-          'Neighbour: "I saw someone in a black hoodie sprinting toward the canal."'
-        ],
-        suspects: [
-          {
-            name: 'Callum Boyd',
-            photo: 'https://randomuser.me/api/portraits/men/45.jpg',
-            licenseId: `UK-${Math.floor(100000 + Math.random() * 900000)}`,
-            plate: `SG${Math.floor(100 + Math.random() * 899)} Z${Math.floor(100 + Math.random() * 899)}`,
-            record: '1 arrest for vandalism in 2023',
-            warrant: false
-          },
-          {
-            name: 'Declan Fraser',
-            photo: 'https://randomuser.me/api/portraits/men/64.jpg',
-            licenseId: `UK-${Math.floor(100000 + Math.random() * 900000)}`,
-            plate: `G${Math.floor(100 + Math.random() * 899)} FTS`,
-            record: 'Clean record',
-            warrant: false
-          }
-        ]
-      }
-    ];
+    const caseTemplates = Array.from({ length: 100 }, (_, i) => ({
+      id: () => `G-${1000 + i}`,
+      summary: 'Unusual incident at Buchanan St. Suspect dressed as a clown reportedly stole 4kg of raw meat from butcher shop.',
+      description: 'Scene shows forced entry, red footprints leading away, and strange notes quoting Shakespeare left at the counter.',
+      radio: 'Dispatch: Code 21 at Buchanan Butchers. Clown suspect. May be armed with cleaver.',
+      evidence: [ { item: 'Note: “Is this a dagger which I see before me?”' } ],
+      witnesses: [
+        'Butcher: “I swear it was a clown with a limp!”',
+        'Passerby: “Red footprints led to Queen Street station.”'
+      ],
+      suspects: [
+        {
+          name: `Alexi Rourke`,
+          licenseId: `UK-${Math.floor(100000 + Math.random() * 900000)}`,
+          plate: `G${Math.floor(100 + Math.random() * 899)} FTS`,
+          record: '2 priors: petty theft and public disturbance',
+          warrant: Math.random() > 0.5
+        }
+      ]
+    }));
+
+    let currentCase = null;
 
     function eraseHistory() {
       localStorage.clear();
-      alert('History erased.');
       document.getElementById('officerName').value = '';
     }
 
     function startGame() {
-      let name = document.getElementById('officerName').value;
-      if (!name) {
-        name = localStorage.getItem('officerName');
-        if (!name) return alert('Enter your name or save it to play.');
-      } else {
-        localStorage.setItem('officerName', name);
-      }
-
-      const modal = document.getElementById('introModal');
-      modal.style.display = 'none';
+      let name = document.getElementById('officerName').value || localStorage.getItem('officerName');
+      if (!name) return;
+      localStorage.setItem('officerName', name);
+      document.getElementById('introModal').style.display = 'none';
       document.getElementById('mainGame').style.display = 'block';
 
-      const chosen = caseTemplates[Math.floor(Math.random() * caseTemplates.length)];
-      const caseData = { ...chosen, id: chosen.id(), officer: name };
       const doneCases = JSON.parse(localStorage.getItem('completedCases') || '[]');
+      document.getElementById('caseCounter').innerText = `#${doneCases.length + 1}`;
+      currentCase = caseTemplates[doneCases.length % caseTemplates.length];
+      const caseData = { ...currentCase, id: currentCase.id(), officer: name };
       doneCases.push(caseData.id);
       localStorage.setItem('completedCases', JSON.stringify(doneCases));
 
@@ -128,7 +124,7 @@
       document.getElementById('radioLog').innerText = caseData.radio;
 
       document.getElementById('evidenceList').innerHTML = caseData.evidence.map(e =>
-        `<li class="mb-1">${e.item}<br><img src="${e.image}" alt="evidence" class="w-32 h-20 rounded mt-1"></li>`
+        `<li class="mb-1">${e.item}</li>`
       ).join('');
 
       document.getElementById('witnessStatements').innerHTML = caseData.witnesses.map(w => `<p class='mb-2'>${w}</p>`).join('');
@@ -138,7 +134,6 @@
       caseData.suspects.forEach(s => {
         suspectsDiv.innerHTML += `
           <div class="bg-gray-700 p-3 rounded shadow">
-            <img src="${s.photo}" alt="${s.name}" class="w-16 h-16 rounded-full mb-2">
             <p><strong>${s.name}</strong></p>
             <p>License ID: ${s.licenseId}</p>
             <p>Plate: ${s.plate}</p>
@@ -152,13 +147,32 @@
     }
 
     function interview(name) {
-      const q = prompt(`${name} is seated. Ask a question:`);
-      if (q) alert(`${name} responds: "I don’t recall being there. Maybe check your facts."`);
+      showPopup(`Interview: ${name}`, `Q: Where were you?<br>A: I was feeding my cat in Maryhill.<br><br>Q: Do you know the victim?<br>A: Never met them.`);
     }
 
     function checkWarrant(name, id) {
-      const match = Math.random() > 0.6;
-      alert(`License ID: ${id}\nWarrant Status: ${match ? 'Active' : 'None'}`);
+      const hasWarrant = Math.random() > 0.5;
+      if (hasWarrant) {
+        showPopup(`Warrant Approved`, `${name} has an active warrant.<br>Search recovered: clown shoes, cleaver, meat packets.`);
+      } else {
+        showPopup(`Warrant Denied`, `Warrant denied for ${name}. Reason: Insufficient evidence to establish probable cause.`);
+      }
+    }
+
+    function convictCase() {
+      showPopup('Conviction Attempted', 'The court rejected your case due to inconclusive evidence. Restarting case history...');
+      localStorage.setItem('completedCases', '[]');
+      setTimeout(() => location.reload(), 3000);
+    }
+
+    function showPopup(title, content) {
+      document.getElementById('popupTitle').innerHTML = title;
+      document.getElementById('popupContent').innerHTML = content;
+      document.getElementById('popupModal').style.display = 'flex';
+    }
+
+    function closePopup() {
+      document.getElementById('popupModal').style.display = 'none';
     }
   </script>
 </body>
