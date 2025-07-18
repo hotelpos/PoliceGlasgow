@@ -1,179 +1,625 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" >
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PoliceGlasgow: Case Files</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PoliceGlasgow: Police Simulator</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
   <style>
-    body { background-color: #1a202c; color: white; }
+    body { background-color: #1a202c; color: white; min-height: 100vh; }
     .modal-bg {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.7);
+      background: rgba(0,0,0,0.85);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 1000;
     }
+    .hidden { display: none !important; }
+    .scrollbox {
+      max-height: 150px;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
   </style>
 </head>
-<body class="p-6">
+<body class="p-6 flex flex-col min-h-screen">
+
+  <!-- Intro Modal -->
   <div id="introModal" class="modal-bg">
     <div class="bg-gray-800 p-6 rounded shadow-lg w-full max-w-md">
-      <h2 class="text-2xl font-bold mb-4">Welcome Back, Officer</h2>
-      <input id="officerName" class="w-full p-2 text-black mb-4" placeholder="Enter your name">
+      <h2 class="text-3xl font-bold mb-4 text-center">Welcome Officer</h2>
+      <input id="officerName" class="w-full p-2 text-black mb-4" placeholder="Enter your name" />
       <div class="flex justify-between">
-        <button onclick="eraseHistory()" class="bg-red-600 px-4 py-2 rounded">Erase History</button>
-        <button onclick="startGame()" class="bg-blue-600 px-4 py-2 rounded">Play</button>
+        <button id="eraseBtn" class="bg-red-600 px-4 py-2 rounded hover:bg-red-700 transition">Erase History</button>
+        <button id="startBtn" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700 transition">Start Duty</button>
       </div>
     </div>
   </div>
 
-  <div id="mainGame" style="display: none;">
-    <h1 class="text-3xl font-bold mb-4">PoliceGlasgow: Case Files <span id="caseCounter"></span></h1>
-    <div class="bg-gray-800 p-4 rounded mb-4">
-      <h2 class="text-xl font-semibold mb-2">Case Details</h2>
-      <div id="caseDetails" class="text-sm font-mono"></div>
+  <!-- Main Game UI -->
+  <div id="mainGame" class="flex-grow hidden flex flex-col max-w-6xl mx-auto w-full">
+    <header class="mb-4 flex justify-between items-center">
+      <h1 class="text-4xl font-bold">PoliceGlasgow: Police Simulator</h1>
+      <div>
+        <span class="font-mono mr-4">Officer: <span id="officerDisplay"></span></span>
+        <button id="logoutBtn" class="bg-red-700 px-3 py-1 rounded hover:bg-red-800 transition">Logout</button>
+      </div>
+    </header>
+
+    <div class="mb-2 font-mono text-lg">
+      Case #<span id="caseNumberDisplay"></span> — <span id="caseIDDisplay"></span>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div class="bg-gray-800 p-4 rounded">
-        <h2 class="text-xl font-semibold mb-2">📎 Evidence</h2>
-        <ul id="evidenceList" class="list-disc list-inside text-sm"></ul>
-      </div>
-      <div class="bg-gray-800 p-4 rounded">
-        <h2 class="text-xl font-semibold mb-2">📻 Radio Log</h2>
-        <div id="radioLog" class="text-sm font-mono"></div>
-      </div>
-      <div class="bg-gray-800 p-4 rounded">
-        <h2 class="text-xl font-semibold mb-2">🔫 Weapon Log</h2>
-        <div id="weaponLog" class="text-sm font-mono">Weapon recovered: Kitchen knife (found near crime scene).</div>
-      </div>
-      <div class="bg-gray-800 p-4 rounded">
-        <h2 class="text-xl font-semibold mb-2">👥 Witness Statements</h2>
-        <div id="witnessStatements" class="text-sm"></div>
-      </div>
-      <div class="bg-gray-800 p-4 rounded col-span-2">
-        <h2 class="text-xl font-semibold mb-2">👤 Suspects</h2>
-        <div id="suspects" class="text-sm grid gap-2"></div>
-      </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <section class="bg-gray-800 p-4 rounded overflow-auto max-h-[220px]">
+        <h2 class="text-xl font-semibold mb-2 border-b border-gray-700 pb-1">Case Details</h2>
+        <div id="caseDescription" class="whitespace-pre-wrap text-sm"></div>
+      </section>
+
+      <section class="bg-gray-800 p-4 rounded overflow-auto max-h-[220px]">
+        <h2 class="text-xl font-semibold mb-2 border-b border-gray-700 pb-1">Radio Log</h2>
+        <div id="radioLog" class="whitespace-pre-wrap text-sm font-mono scrollbox"></div>
+      </section>
+
+      <section class="bg-gray-800 p-4 rounded overflow-auto max-h-[220px]">
+        <h2 class="text-xl font-semibold mb-2 border-b border-gray-700 pb-1">Weapon Log</h2>
+        <ul id="weaponLog" class="list-disc list-inside text-sm scrollbox"></ul>
+      </section>
     </div>
-    <div class="mt-6">
-      <button onclick="convictCase()" class="bg-green-600 px-6 py-3 rounded text-white">Convict</button>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+
+      <section class="bg-gray-800 p-4 rounded overflow-auto max-h-[300px]">
+        <h2 class="text-xl font-semibold mb-2 border-b border-gray-700 pb-1">Witnesses</h2>
+        <div id="witnessList" class="scrollbox text-sm space-y-2"></div>
+      </section>
+
+      <section class="bg-gray-800 p-4 rounded overflow-auto max-h-[300px]">
+        <h2 class="text-xl font-semibold mb-2 border-b border-gray-700 pb-1">Suspects</h2>
+        <div id="suspectList" class="scrollbox space-y-4"></div>
+      </section>
+    </div>
+
+    <div class="flex justify-center space-x-4">
+      <button id="convictBtn" class="bg-green-600 px-6 py-3 rounded hover:bg-green-700 transition font-semibold" disabled>Convict Selected Suspect(s)</button>
+      <button id="nextCaseBtn" class="bg-gray-600 px-6 py-3 rounded hover:bg-gray-700 transition font-semibold hidden">Next Case</button>
     </div>
   </div>
 
-  <div id="popupModal" class="modal-bg" style="display: none;">
-    <div class="bg-gray-900 p-6 rounded shadow-lg w-full max-w-md">
-      <h2 id="popupTitle" class="text-xl font-bold mb-4"></h2>
-      <p id="popupContent" class="mb-4"></p>
-      <button onclick="closePopup()" class="bg-blue-600 px-4 py-2 rounded">OK</button>
+  <!-- Interview Modal -->
+  <div id="interviewModal" class="modal-bg hidden flex-col max-w-lg p-6 bg-gray-900 rounded shadow-lg text-white">
+    <h3 id="interviewTitle" class="text-2xl font-bold mb-4"></h3>
+    <div id="interviewQ" class="mb-4 font-mono"></div>
+    <div id="interviewA" class="mb-6 whitespace-pre-wrap bg-gray-800 p-3 rounded max-h-40 overflow-auto"></div>
+    <div class="flex justify-between">
+      <button id="prevQBtn" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700 transition">Previous</button>
+      <button id="nextQBtn" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700 transition">Next</button>
+      <button id="closeInterviewBtn" class="bg-red-600 px-4 py-2 rounded hover:bg-red-700 transition">Close</button>
+    </div>
+  </div>
+
+  <!-- Warrant Modal -->
+  <div id="warrantModal" class="modal-bg hidden flex-col max-w-md p-6 bg-gray-900 rounded shadow-lg text-white">
+    <h3 class="text-2xl font-bold mb-4" id="warrantModalTitle">Warrant Request</h3>
+    <div id="warrantRequestText" class="mb-4 whitespace-pre-wrap"></div>
+    <div class="mb-4 font-mono" id="warrantStatus"></div>
+    <div class="flex justify-between">
+      <button id="approveWarrantBtn" class="bg-green-600 px-4 py-2 rounded hover:bg-green-700 transition">Approve</button>
+      <button id="denyWarrantBtn" class="bg-red-600 px-4 py-2 rounded hover:bg-red-700 transition">Deny</button>
+      <button id="closeWarrantBtn" class="bg-gray-600 px-4 py-2 rounded hover:bg-gray-700 transition">Close</button>
     </div>
   </div>
 
   <script>
-    const caseTemplates = Array.from({ length: 100 }, (_, i) => ({
-      id: () => `G-${1000 + i}`,
-      summary: 'Unusual incident at Buchanan St. Suspect dressed as a clown reportedly stole 4kg of raw meat from butcher shop.',
-      description: 'Scene shows forced entry, red footprints leading away, and strange notes quoting Shakespeare left at the counter.',
-      radio: 'Dispatch: Code 21 at Buchanan Butchers. Clown suspect. May be armed with cleaver.',
-      evidence: [ { item: 'Note: “Is this a dagger which I see before me?”' } ],
-      witnesses: [
-        'Butcher: “I swear it was a clown with a limp!”',
-        'Passerby: “Red footprints led to Queen Street station.”'
-      ],
-      suspects: [
-        {
-          name: `Alexi Rourke`,
-          licenseId: `UK-${Math.floor(100000 + Math.random() * 900000)}`,
-          plate: `G${Math.floor(100 + Math.random() * 899)} FTS`,
-          record: '2 priors: petty theft and public disturbance',
-          warrant: Math.random() > 0.5
-        }
-      ]
-    }));
+    // --- Data Generators ---
+    const firstNames = ["Callum", "Declan", "Lewis", "Aidan", "Ewan", "Gregor", "Finlay", "Hamish", "Rory", "Stuart"];
+    const lastNames = ["Boyd", "Fraser", "MacDonald", "Stewart", "Campbell", "Ross", "Murray", "Graham", "Paterson", "Douglas"];
+    const witnessNames = ["Angus", "Fiona", "Morag", "Eilidh", "Seamus", "Isla", "Dougie", "Lorna", "Alasdair", "Rhona"];
+    const headshotBase = "https://randomuser.me/api/portraits/men/";
+    const headshotBaseF = "https://randomuser.me/api/portraits/women/";
 
-    let currentCase = null;
-
-    function eraseHistory() {
-      localStorage.clear();
-      document.getElementById('officerName').value = '';
+    function randomFrom(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+    function randomInt(min,max) {
+      return Math.floor(Math.random()*(max-min+1))+min;
     }
 
-    function startGame() {
-      let name = document.getElementById('officerName').value || localStorage.getItem('officerName');
-      if (!name) return;
-      localStorage.setItem('officerName', name);
-      document.getElementById('introModal').style.display = 'none';
-      document.getElementById('mainGame').style.display = 'block';
+    // Interview Q&A templates for suspects and witnesses
+    const interviewQA = {
+      suspect: [
+        { q: "Where were you on the night of the incident?", a: ["I was at home watching TV.", "I was out with friends.", "I don't remember clearly."] },
+        { q: "Do you know the victim?", a: ["Yes, we had a disagreement recently.", "No, never met.", "Only by face, nothing more."] },
+        { q: "Can anyone confirm your whereabouts?", a: ["Yes, my friend can.", "No, I was alone.", "Not sure, maybe someone saw me."] },
+        { q: "Why would anyone accuse you?", a: ["I have no enemies.", "Maybe someone wants to frame me.", "I have no idea."] },
+        { q: "Did you own any weapons recently?", a: ["No weapons at all.", "Just a small pocket knife.", "I had a baseball bat, but no more."] }
+      ],
+      witness: [
+        { q: "What did you see?", a: ["I saw someone running away.", "Heard loud noises but didn't see.", "Saw a suspicious car nearby."] },
+        { q: "Did you notice any details about the suspect?", a: ["Wore a dark hoodie.", "Had a limp.", "Couldn't see the face clearly."] },
+        { q: "How well do you know the victim?", a: ["We were neighbors.", "Not well, just saw around.", "Close friends."] },
+        { q: "Did you hear any noises or voices?", a: ["Yes, shouting.", "No, it was quiet.", "Just some footsteps."] },
+        { q: "Would you recognize the suspect again?", a: ["Yes, definitely.", "Maybe, hard to say.", "No, I don't think so."] }
+      ]
+    };
 
-      const doneCases = JSON.parse(localStorage.getItem('completedCases') || '[]');
-      document.getElementById('caseCounter').innerText = `#${doneCases.length + 1}`;
-      currentCase = caseTemplates[doneCases.length % caseTemplates.length];
-      const caseData = { ...currentCase, id: currentCase.id(), officer: name };
-      doneCases.push(caseData.id);
-      localStorage.setItem('completedCases', JSON.stringify(doneCases));
+    // 100 randomized cases
+    const cases = [];
+    for(let i=1;i<=100;i++) {
+      // Random suspect count 1-4
+      const suspectCount = randomInt(1,4);
+      // Random witness count 1-3
+      const witnessCount = randomInt(1,3);
+      // Weapon options
+      const weapons = ["Baseball Bat", "Knife", "Pistol", "Crowbar", "None"];
+      // Randomly decide weapon used or none
+      const weaponUsed = weapons[randomInt(0,weapons.length-1)];
 
-      document.getElementById('caseDetails').innerHTML = `
-        <strong>Case ID:</strong> ${caseData.id}<br>
-        <strong>Responding Officer:</strong> PC John Mackenzie<br>
-        <strong>Badge ID:</strong> C3421<br>
-        <strong>Description:</strong> ${caseData.description}
-      `;
+      // Generate suspects array
+      const suspects = [];
+      for(let s=0;s<suspectCount;s++) {
+        const genderMale = Math.random() > 0.4; // 60% male
+        const firstName = genderMale ? randomFrom(firstNames) : randomFrom(witnessNames);
+        const lastName = randomFrom(lastNames);
+        const licenseId = `UK-${randomInt(100000,999999)}`;
+        const plate = `G${randomInt(100,999)} ${String.fromCharCode(65 + randomInt(0,25))}${String.fromCharCode(65 + randomInt(0,25))}${String.fromCharCode(65 + randomInt(0,25))}`;
+        const record = Math.random() < 0.3 ? "Previous arrests for theft." : "Clean record.";
+        const warrantActive = Math.random() < 0.15;
+        const headshot = genderMale ? `${headshotBase}${randomInt(10,99)}.jpg` : `${headshotBaseF}${randomInt(10,99)}.jpg`;
 
-      document.getElementById('radioLog').innerText = caseData.radio;
+        suspects.push({
+          id: `S${i}-${s}`,
+          name: `${firstName} ${lastName}`,
+          licenseId,
+          plate,
+          record,
+          warrant: warrantActive,
+          interviewed: false,
+          warrantRequested: false,
+          arrestWarrant: false,
+          searchWarrant: false,
+          headshot
+        });
+      }
 
-      document.getElementById('evidenceList').innerHTML = caseData.evidence.map(e =>
-        `<li class="mb-1">${e.item}</li>`
-      ).join('');
+      // Generate witnesses
+      const witnesses = [];
+      for(let w=0;w<witnessCount;w++) {
+        const name = randomFrom(witnessNames) + " " + randomFrom(lastNames);
+        witnesses.push({
+          id: `W${i}-${w}`,
+          name,
+          interviewed: false,
+          statements: interviewQA.witness.map(q => ({
+            question: q.q,
+            answer: randomFrom(q.a)
+          }))
+        });
+      }
 
-      document.getElementById('witnessStatements').innerHTML = caseData.witnesses.map(w => `<p class='mb-2'>${w}</p>`).join('');
+      // Case details & radio logs
+      const caseSummary = `Incident reported at location #${randomInt(1,100)}. Suspected burglary and assault.`;
+      const caseDescription = `Detailed case notes for incident #${i}.\nPolice responded to a call about suspicious activity. Evidence collected includes footprints, fingerprints, and witness testimonies.`;
 
-      const suspectsDiv = document.getElementById('suspects');
-      suspectsDiv.innerHTML = '';
-      caseData.suspects.forEach(s => {
-        suspectsDiv.innerHTML += `
-          <div class="bg-gray-700 p-3 rounded shadow">
-            <p><strong>${s.name}</strong></p>
-            <p>License ID: ${s.licenseId}</p>
-            <p>Plate: ${s.plate}</p>
-            <p>Record: ${s.record}</p>
-            <p>Warrant: ${s.warrant ? 'Yes' : 'No'}</p>
-            <button class="mt-2 bg-blue-500 px-2 py-1 rounded text-sm" onclick="interview('${s.name}')">Interview</button>
-            <button class="mt-2 bg-yellow-500 px-2 py-1 rounded text-sm ml-2" onclick="checkWarrant('${s.name}', '${s.licenseId}')">Search Warrant DB</button>
-          </div>
-        `;
+      // Radio logs
+      const radioLog = [
+        `Dispatch to unit, incident #${i} reported.`,
+        `Officer dispatched to location.`,
+        `Backup requested.`,
+        `Suspect vehicle seen leaving area.`,
+        `Case under investigation.`
+      ];
+
+      // Weapon log
+      const weaponLog = weaponUsed === "None" ? [] : [weaponUsed];
+
+      cases.push({
+        id: `CASE${String(i).padStart(3,'0')}`,
+        summary: caseSummary,
+        description: caseDescription,
+        radioLog,
+        weaponLog,
+        suspects,
+        witnesses,
+        solved: false,
+        correctConviction: false
       });
     }
 
-    function interview(name) {
-      showPopup(`Interview: ${name}`, `Q: Where were you?<br>A: I was feeding my cat in Maryhill.<br><br>Q: Do you know the victim?<br>A: Never met them.`);
+    // --- Game State ---
+    let currentCaseIndex = 0;
+    let officerName = null;
+    let completedCases = JSON.parse(localStorage.getItem('completedCases')) || [];
+    let convictedSuspects = new Set();
+
+    // --- DOM Elements ---
+    const introModal = document.getElementById('introModal');
+    const mainGame = document.getElementById('mainGame');
+    const officerNameInput = document.getElementById('officerName');
+    const eraseBtn = document.getElementById('eraseBtn');
+    const startBtn = document.getElementById('startBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    const officerDisplay = document.getElementById('officerDisplay');
+    const caseNumberDisplay = document.getElementById('caseNumberDisplay');
+    const caseIDDisplay = document.getElementById('caseIDDisplay');
+    const caseDescription = document.getElementById('caseDescription');
+    const radioLogEl = document.getElementById('radioLog');
+    const weaponLogEl = document.getElementById('weaponLog');
+
+    const witnessList = document.getElementById('witnessList');
+    const suspectList = document.getElementById('suspectList');
+
+    const convictBtn = document.getElementById('convictBtn');
+    const nextCaseBtn = document.getElementById('nextCaseBtn');
+
+    // Interview modal elements
+    const interviewModal = document.getElementById('interviewModal');
+    const interviewTitle = document.getElementById('interviewTitle');
+    const interviewQ = document.getElementById('interviewQ');
+    const interviewA = document.getElementById('interviewA');
+    const prevQBtn = document.getElementById('prevQBtn');
+    const nextQBtn = document.getElementById('nextQBtn');
+    const closeInterviewBtn = document.getElementById('closeInterviewBtn');
+
+    // Warrant modal elements
+    const warrantModal = document.getElementById('warrantModal');
+    const warrantModalTitle = document.getElementById('warrantModalTitle');
+    const warrantRequestText = document.getElementById('warrantRequestText');
+    const warrantStatus = document.getElementById('warrantStatus');
+    const approveWarrantBtn = document.getElementById('approveWarrantBtn');
+    const denyWarrantBtn = document.getElementById('denyWarrantBtn');
+    const closeWarrantBtn = document.getElementById('closeWarrantBtn');
+
+    // --- Functions ---
+
+    // Save progress
+    function saveProgress() {
+      localStorage.setItem('officerName', officerName);
+      localStorage.setItem('completedCases', JSON.stringify(completedCases));
     }
 
-    function checkWarrant(name, id) {
-      const hasWarrant = Math.random() > 0.5;
-      if (hasWarrant) {
-        showPopup(`Warrant Approved`, `${name} has an active warrant.<br>Search recovered: clown shoes, cleaver, meat packets.`);
-      } else {
-        showPopup(`Warrant Denied`, `Warrant denied for ${name}. Reason: Insufficient evidence to establish probable cause.`);
+    function eraseHistory() {
+      if(confirm("Are you sure you want to erase all history?")) {
+        localStorage.clear();
+        location.reload();
       }
     }
 
-    function convictCase() {
-      showPopup('Conviction Attempted', 'The court rejected your case due to inconclusive evidence. Restarting case history...');
-      localStorage.setItem('completedCases', '[]');
-      setTimeout(() => location.reload(), 3000);
+    function logout() {
+      location.reload();
     }
 
-    function showPopup(title, content) {
-      document.getElementById('popupTitle').innerHTML = title;
-      document.getElementById('popupContent').innerHTML = content;
-      document.getElementById('popupModal').style.display = 'flex';
+    // Load officer name and start game
+    function startGame() {
+      const nameInput = officerNameInput.value.trim();
+      if(nameInput) {
+        officerName = nameInput;
+        localStorage.setItem('officerName', officerName);
+      } else {
+        officerName = localStorage.getItem('officerName');
+        if(!officerName) {
+          alert("Please enter your name.");
+          return;
+        }
+      }
+      introModal.classList.add('hidden');
+      mainGame.classList.remove('hidden');
+      officerDisplay.textContent = officerName;
+
+      // Find first unsolved case
+      currentCaseIndex = 0;
+      while(completedCases.includes(cases[currentCaseIndex].id) && currentCaseIndex < cases.length - 1) {
+        currentCaseIndex++;
+      }
+      loadCase(currentCaseIndex);
     }
 
-    function closePopup() {
-      document.getElementById('popupModal').style.display = 'none';
+    // Load case UI
+    function loadCase(index) {
+      convictedSuspects.clear();
+      convictBtn.disabled = true;
+      nextCaseBtn.classList.add('hidden');
+      const c = cases[index];
+
+      caseNumberDisplay.textContent = index + 1;
+      caseIDDisplay.textContent = c.id;
+      caseDescription.textContent = c.description;
+
+      // Radio log text
+      radioLogEl.textContent = c.radioLog.join('\n');
+
+      // Weapon log list
+      weaponLogEl.innerHTML = "";
+      if(c.weaponLog.length === 0) {
+        weaponLogEl.innerHTML = "<li>None</li>";
+      } else {
+        c.weaponLog.forEach(w => {
+          const li = document.createElement('li');
+          li.textContent = w;
+          weaponLogEl.appendChild(li);
+        });
+      }
+
+      // Render witnesses
+      witnessList.innerHTML = "";
+      c.witnesses.forEach(w => {
+        const wDiv = document.createElement('div');
+        wDiv.className = "bg-gray-700 p-2 rounded flex justify-between items-center";
+
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = w.name + (w.interviewed ? " (Interviewed)" : "");
+        wDiv.appendChild(nameSpan);
+
+        const interviewBtn = document.createElement('button');
+        interviewBtn.className = "bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-sm";
+        interviewBtn.textContent = "Interview";
+        interviewBtn.disabled = w.interviewed;
+        interviewBtn.onclick = () => openInterview(w, 'witness');
+        wDiv.appendChild(interviewBtn);
+
+        witnessList.appendChild(wDiv);
+      });
+
+      // Render suspects
+      suspectList.innerHTML = "";
+      c.suspects.forEach(s => {
+        const sDiv = document.createElement('div');
+        sDiv.className = "bg-gray-700 p-3 rounded flex flex-col md:flex-row items-center md:items-start space-y-3 md:space-y-0 md:space-x-4";
+
+        // Headshot
+        const img = document.createElement('img');
+        img.src = s.headshot;
+        img.alt = s.name;
+        img.className = "w-16 h-16 rounded-full object-cover border-2 border-gray-400";
+        sDiv.appendChild(img);
+
+        // Info
+        const infoDiv = document.createElement('div');
+        infoDiv.className = "flex-grow space-y-1 text-sm";
+
+        const nameP = document.createElement('p');
+        nameP.className = "font-semibold";
+        nameP.textContent = s.name + (s.interviewed ? " (Interviewed)" : "");
+        infoDiv.appendChild(nameP);
+
+        const licenseP = document.createElement('p');
+        licenseP.textContent = `License ID: ${s.licenseId}`;
+        infoDiv.appendChild(licenseP);
+
+        const plateP = document.createElement('p');
+        plateP.textContent = `Plate: ${s.plate}`;
+        infoDiv.appendChild(plateP);
+
+        const recordP = document.createElement('p');
+        recordP.textContent = `Record: ${s.record}`;
+        infoDiv.appendChild(recordP);
+
+        const warrantP = document.createElement('p');
+        warrantP.textContent = s.warrant ? "Active Warrant" : "No Active Warrant";
+        warrantP.className = s.warrant ? "text-red-500 font-bold" : "text-green-400";
+        infoDiv.appendChild(warrantP);
+
+        sDiv.appendChild(infoDiv);
+
+        // Actions
+        const actionDiv = document.createElement('div');
+        actionDiv.className = "flex flex-col space-y-2";
+
+        // Interview button
+        const interviewBtn = document.createElement('button');
+        interviewBtn.className = "bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-sm";
+        interviewBtn.textContent = "Interview";
+        interviewBtn.disabled = s.interviewed;
+        interviewBtn.onclick = () => openInterview(s, 'suspect');
+        actionDiv.appendChild(interviewBtn);
+
+        // Request Warrant buttons
+        const warrantSearchBtn = document.createElement('button');
+        warrantSearchBtn.className = "bg-yellow-600 hover:bg-yellow-700 px-2 py-1 rounded text-sm";
+        warrantSearchBtn.textContent = s.searchWarrant ? "Search Warrant Requested" : "Request Search Warrant";
+        warrantSearchBtn.disabled = s.searchWarrant;
+        warrantSearchBtn.onclick = () => requestWarrant(s, 'search');
+        actionDiv.appendChild(warrantSearchBtn);
+
+        const warrantArrestBtn = document.createElement('button');
+        warrantArrestBtn.className = "bg-red-700 hover:bg-red-800 px-2 py-1 rounded text-sm";
+        warrantArrestBtn.textContent = s.arrestWarrant ? "Arrest Warrant Requested" : "Request Arrest Warrant";
+        warrantArrestBtn.disabled = s.arrestWarrant;
+        warrantArrestBtn.onclick = () => requestWarrant(s, 'arrest');
+        actionDiv.appendChild(warrantArrestBtn);
+
+        // Conviction checkbox
+        const convictLabel = document.createElement('label');
+        convictLabel.className = "text-sm cursor-pointer select-none";
+
+        const convictCheckbox = document.createElement('input');
+        convictCheckbox.type = "checkbox";
+        convictCheckbox.className = "mr-1";
+        convictCheckbox.disabled = !s.interviewed;
+        convictCheckbox.onclick = (e) => {
+          if(e.target.checked) {
+            convictedSuspects.add(s.id);
+          } else {
+            convictedSuspects.delete(s.id);
+          }
+          convictBtn.disabled = convictedSuspects.size === 0;
+        };
+
+        convictLabel.appendChild(convictCheckbox);
+        convictLabel.appendChild(document.createTextNode("Convict"));
+        actionDiv.appendChild(convictLabel);
+
+        sDiv.appendChild(actionDiv);
+
+        suspectList.appendChild(sDiv);
+      });
     }
+
+    // Interview Modal Logic
+    let interviewPerson = null;
+    let interviewType = null;
+    let interviewQAList = [];
+    let currentQIndex = 0;
+
+    function openInterview(person, type) {
+      interviewPerson = person;
+      interviewType = type;
+      currentQIndex = 0;
+
+      // Prepare questions/answers
+      if(type === "suspect") {
+        // We use the interviewQA.suspect but generate answers randomly each time (could be stored)
+        interviewQAList = interviewQA.suspect.map(q => ({
+          question: q.q,
+          answer: randomFrom(q.a)
+        }));
+      } else {
+        // Witness statements stored in person.statements
+        interviewQAList = person.statements;
+      }
+
+      interviewTitle.textContent = `Interview: ${person.name} (${type.charAt(0).toUpperCase() + type.slice(1)})`;
+      showInterviewQA(currentQIndex);
+      interviewModal.classList.remove('hidden');
+    }
+
+    function showInterviewQA(index) {
+      const qa = interviewQAList[index];
+      interviewQ.textContent = `Q: ${qa.question}`;
+      interviewA.textContent = `A: ${qa.answer}`;
+
+      prevQBtn.disabled = index === 0;
+      nextQBtn.disabled = index === interviewQAList.length - 1;
+    }
+
+    prevQBtn.onclick = () => {
+      if(currentQIndex > 0) {
+        currentQIndex--;
+        showInterviewQA(currentQIndex);
+      }
+    };
+    nextQBtn.onclick = () => {
+      if(currentQIndex < interviewQAList.length - 1) {
+        currentQIndex++;
+        showInterviewQA(currentQIndex);
+      }
+    };
+    closeInterviewBtn.onclick = () => {
+      interviewModal.classList.add('hidden');
+      if(interviewType === 'suspect') {
+        interviewPerson.interviewed = true;
+      } else {
+        interviewPerson.interviewed = true;
+      }
+      loadCase(currentCaseIndex);
+    };
+
+    // Warrant modal logic
+    let warrantSubject = null;
+    let warrantType = null;
+
+    function requestWarrant(suspect, type) {
+      warrantSubject = suspect;
+      warrantType = type;
+      warrantRequestText.textContent = `Requesting a ${type} warrant for ${suspect.name}.\nReason: Investigation related to case ${cases[currentCaseIndex].id}.`;
+      warrantStatus.textContent = "";
+      approveWarrantBtn.disabled = false;
+      denyWarrantBtn.disabled = false;
+      closeWarrantBtn.disabled = true;
+      warrantModal.classList.remove('hidden');
+    }
+
+    approveWarrantBtn.onclick = () => {
+      warrantStatus.textContent = "Warrant Approved.";
+      warrantStatus.className = "mb-4 font-mono text-green-400";
+      approveWarrantBtn.disabled = true;
+      denyWarrantBtn.disabled = true;
+      closeWarrantBtn.disabled = false;
+
+      if(warrantType === 'search') {
+        warrantSubject.searchWarrant = true;
+      } else if(warrantType === 'arrest') {
+        warrantSubject.arrestWarrant = true;
+      }
+      loadCase(currentCaseIndex);
+    };
+
+    denyWarrantBtn.onclick = () => {
+      warrantStatus.textContent = "Warrant Denied. Insufficient evidence.";
+      warrantStatus.className = "mb-4 font-mono text-red-400";
+      approveWarrantBtn.disabled = true;
+      denyWarrantBtn.disabled = true;
+      closeWarrantBtn.disabled = false;
+    };
+
+    closeWarrantBtn.onclick = () => {
+      warrantModal.classList.add('hidden');
+    };
+
+    // Convict suspects logic
+    convictBtn.onclick = () => {
+      const c = cases[currentCaseIndex];
+
+      // Check if convictedSuspects matches actual guilty suspect(s)
+      // For simplicity: randomly pick 1 or more suspects as actually guilty here, 
+      // But to make it deterministic, let's say the first suspect is guilty.
+
+      // Let's mark the first suspect as guilty:
+      const guiltySuspectIds = new Set([c.suspects[0].id]);
+
+      const convictedArray = Array.from(convictedSuspects);
+
+      let correct = convictedArray.length === guiltySuspectIds.size && convictedArray.every(id => guiltySuspectIds.has(id));
+
+      if(correct) {
+        alert("Correct! You convicted the right suspect(s).");
+        c.solved = true;
+        c.correctConviction = true;
+        completedCases.push(c.id);
+        saveProgress();
+        convictBtn.disabled = true;
+        nextCaseBtn.classList.remove('hidden');
+      } else {
+        alert("Incorrect conviction. Review your evidence and interviews carefully.");
+      }
+    };
+
+    nextCaseBtn.onclick = () => {
+      // Load next unsolved case
+      do {
+        currentCaseIndex++;
+        if(currentCaseIndex >= cases.length) {
+          alert("All 100 cases completed! Great work, officer.");
+          currentCaseIndex = 0;
+          break;
+        }
+      } while(completedCases.includes(cases[currentCaseIndex].id));
+      loadCase(currentCaseIndex);
+      nextCaseBtn.classList.add('hidden');
+      convictedSuspects.clear();
+      convictBtn.disabled = true;
+    };
+
+    // Event listeners
+    eraseBtn.onclick = eraseHistory;
+    startBtn.onclick = startGame;
+    logoutBtn.onclick = logout;
+
+    // On page load
+    window.onload = () => {
+      // Load saved name if exists
+      const savedName = localStorage.getItem('officerName');
+      if(savedName) {
+        officerNameInput.value = savedName;
+      }
+    };
   </script>
 </body>
 </html>
