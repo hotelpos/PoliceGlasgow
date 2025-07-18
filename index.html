@@ -3,133 +3,120 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PoliceGlasgow: Police Simulator</title>
+  <title>PoliceGlasgow: Case Files</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <style>
     body { background-color: #1a202c; color: white; }
-    #map {
-      width: 100%;
-      height: 400px;
-      background-color: #111827;
-      position: relative;
-      overflow: hidden;
-    }
-    .car {
-      width: 30px;
-      height: 50px;
-      background: white;
-      border: 2px solid blue;
-      position: absolute;
-      top: 180px;
-      left: 240px;
-      transform: rotate(0deg);
-    }
-    .terminal {
-      font-family: monospace;
-      background-color: #2D3748;
-      padding: 10px;
-      border-radius: 5px;
-      max-height: 150px;
-      overflow-y: auto;
-    }
-    #minimap {
-      width: 100%;
-      height: 100px;
-      background: #4A5568;
-      border-radius: 5px;
+    .modal-bg {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
     }
   </style>
 </head>
 <body class="p-6">
-  <h1 class="text-3xl font-bold mb-4">PoliceGlasgow: Police Simulator</h1>
-
-  <div id="map" class="mb-4">
-    <div id="car" class="car"></div>
-  </div>
-
-  <div id="minimap" class="mb-4 flex items-center justify-center text-white text-sm">
-    Minimap placeholder - coming soon with full road layout.
-  </div>
-
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <!-- Dispatch Radio -->
-    <div class="bg-gray-800 p-4 rounded">
-      <h2 class="text-xl font-semibold mb-2">📡 Dispatch</h2>
-      <div id="dispatchBox" class="terminal"></div>
-      <button onclick="sendDispatch()" class="mt-2 bg-blue-600 px-3 py-1 rounded">Receive Dispatch</button>
+  <div id="introModal" class="modal-bg">
+    <div class="bg-gray-800 p-6 rounded shadow-lg w-full max-w-md">
+      <h2 class="text-2xl font-bold mb-4">Enter Officer Name</h2>
+      <input id="officerName" class="w-full p-2 text-black mb-4" placeholder="e.g., PC Jamie Fraser">
+      <button onclick="startGame()" class="bg-blue-600 px-4 py-2 rounded">Start Case</button>
     </div>
+  </div>
 
-    <!-- License Plate Lookup -->
-    <div class="bg-gray-800 p-4 rounded">
-      <h2 class="text-xl font-semibold mb-2">🔎 License Plate Check</h2>
-      <input type="text" id="plateInput" placeholder="Enter Plate (e.g., SC05 LND)" class="w-full p-2 mb-2 text-black">
-      <button onclick="lookupPlate()" class="bg-green-600 px-3 py-1 rounded">Lookup</button>
-      <div id="plateResult" class="mt-2 terminal"></div>
+  <div id="mainGame" style="display: none;">
+    <h1 class="text-3xl font-bold mb-4">PoliceGlasgow: Case Files</h1>
+    <div class="bg-gray-800 p-4 rounded mb-4">
+      <h2 class="text-xl font-semibold mb-2">Case Details</h2>
+      <div id="caseDetails" class="text-sm font-mono"></div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="bg-gray-800 p-4 rounded">
+        <h2 class="text-xl font-semibold mb-2">📎 Evidence</h2>
+        <ul id="evidenceList" class="list-disc list-inside text-sm"></ul>
+      </div>
+      <div class="bg-gray-800 p-4 rounded">
+        <h2 class="text-xl font-semibold mb-2">👥 Witness Statements</h2>
+        <div id="witnessStatements" class="text-sm"></div>
+      </div>
+      <div class="bg-gray-800 p-4 rounded col-span-2">
+        <h2 class="text-xl font-semibold mb-2">👤 Suspects</h2>
+        <div id="suspects" class="text-sm grid gap-2"></div>
+      </div>
     </div>
   </div>
 
   <script>
-    const dispatchMessages = [
-      "Control to Unit 7: Respond to noise complaint at Govan Rd.",
-      "Control to Unit 3: Possible stolen vehicle on Sauchiehall Street.",
-      "Control to Unit 12: Welfare check at St Enoch Square.",
-      "Control to Unit 5: RTC reported on M8 near Charing Cross.",
+    const cases = [
+      {
+        id: '2025-0718-G01',
+        officer: '',
+        badge: 'C3421',
+        summary: 'Reported break-in at a convenience store on Argyle Street. Officer responded to triggered alarm.',
+        evidence: ['CCTV footage from 02:43 AM', 'Broken window glass with blood trace', 'Shoe print at rear exit'],
+        witnesses: [
+          'Store owner: "I got a call from the alarm company and arrived to see the door smashed in."',
+          'Neighbour: "Saw someone running in a hoodie right before police arrived."'
+        ],
+        suspects: [
+          {
+            name: 'Lewis McArthur',
+            photo: 'https://randomuser.me/api/portraits/men/32.jpg',
+            record: '2 prior arrests for burglary',
+            warrant: false
+          },
+          {
+            name: 'Daniel Muir',
+            photo: 'https://randomuser.me/api/portraits/men/52.jpg',
+            record: 'Clean record',
+            warrant: false
+          }
+        ]
+      }
     ];
 
-    function sendDispatch() {
-      const box = document.getElementById("dispatchBox");
-      const msg = dispatchMessages[Math.floor(Math.random() * dispatchMessages.length)];
-      box.innerHTML += `> ${msg}<br>`;
-      box.scrollTop = box.scrollHeight;
+    function startGame() {
+      const name = document.getElementById('officerName').value;
+      if (!name) return alert('Please enter your officer name.');
 
-      // Optional speech
-      const synth = window.speechSynthesis;
-      if (synth) {
-        const utter = new SpeechSynthesisUtterance(msg);
-        utter.lang = 'en-GB';
-        synth.speak(utter);
-      }
-    }
+      const modal = document.getElementById('introModal');
+      modal.style.display = 'none';
+      document.getElementById('mainGame').style.display = 'block';
 
-    function lookupPlate() {
-      const plate = document.getElementById("plateInput").value.toUpperCase();
-      const result = document.getElementById("plateResult");
+      const caseData = cases[0];
+      caseData.officer = name;
 
-      const records = {
-        "SC05 LND": { owner: "Jamie Fraser", status: "Valid", arrests: 0, warrants: "None" },
-        "GL15 PCT": { owner: "Moira MacDonald", status: "Expired MOT", arrests: 1, warrants: "Active Warrant - Theft" },
-        "GA62 LAW": { owner: "Craig Douglas", status: "Valid", arrests: 2, warrants: "None" },
-      };
+      document.getElementById('caseDetails').innerHTML = `
+        <strong>Case ID:</strong> ${caseData.id}<br>
+        <strong>Responding Officer:</strong> ${caseData.officer}<br>
+        <strong>Badge ID:</strong> ${caseData.badge}<br>
+        <strong>Description:</strong> ${caseData.summary}
+      `;
 
-      if (records[plate]) {
-        const data = records[plate];
-        result.innerHTML = `
-          > Owner: ${data.owner}<br>
-          > Status: ${data.status}<br>
-          > Arrests: ${data.arrests}<br>
-          > Warrants: ${data.warrants}<br>
+      document.getElementById('evidenceList').innerHTML = caseData.evidence.map(e => `<li>${e}</li>`).join('');
+      document.getElementById('witnessStatements').innerHTML = caseData.witnesses.map(w => `<p class='mb-2'>"${w}"</p>`).join('');
+
+      const suspectsDiv = document.getElementById('suspects');
+      caseData.suspects.forEach(s => {
+        const suspectCard = `
+          <div class="bg-gray-700 p-3 rounded shadow">
+            <img src="${s.photo}" alt="${s.name}" class="w-16 h-16 rounded-full mb-2">
+            <p><strong>${s.name}</strong></p>
+            <p>Record: ${s.record}</p>
+            <p>Warrant: ${s.warrant ? 'Yes' : 'No'}</p>
+            <button class="mt-2 bg-blue-500 px-2 py-1 rounded text-sm" onclick="interview('${s.name}')">Interview</button>
+          </div>
         `;
-      } else {
-        result.innerHTML = "> No record found for that plate.";
-      }
+        suspectsDiv.innerHTML += suspectCard;
+      });
     }
 
-    // Driving Logic
-    const car = document.getElementById("car");
-    let x = 240;
-    let y = 180;
-    let angle = 0;
-
-    document.addEventListener("keydown", function(e) {
-      if (e.key === "ArrowUp") y -= 5;
-      if (e.key === "ArrowDown") y += 5;
-      if (e.key === "ArrowLeft") angle -= 5;
-      if (e.key === "ArrowRight") angle += 5;
-
-      car.style.top = y + "px";
-      car.style.left = x + "px";
-      car.style.transform = `rotate(${angle}deg)`;
-    });
+    function interview(name) {
+      alert(`Interview started with ${name}... (AI logic not implemented yet)`);
+    }
   </script>
 </body>
 </html>
