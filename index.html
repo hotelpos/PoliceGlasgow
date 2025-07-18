@@ -1,843 +1,1018 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" >
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Police Investigation Simulator</title>
-<style>
-  * {
-    box-sizing: border-box;
-  }
-  html, body {
-    margin: 0; padding: 0; height: 100%;
-    font-family: Arial, sans-serif;
-    background: #121212;
-    color: #eee;
-  }
-  body.fullscreen {
-    height: 100vh;
-    overflow: hidden;
-  }
-  #loading-screen, #login-screen, #app {
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: #222;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-  }
-  #loading-screen.hidden, #login-screen.hidden, #app.hidden {
-    display: none;
-  }
-  #loading-screen {
-    font-size: 2em;
-    font-weight: bold;
-  }
-  #login-screen input {
-    font-size: 1.2em;
-    padding: 10px;
-    width: 300px;
-    max-width: 80vw;
-    margin-bottom: 20px;
-    border-radius: 5px;
-    border: none;
-  }
-  #login-screen button {
-    font-size: 1.2em;
-    padding: 10px 20px;
-    background: #0078d7;
-    border: none;
-    border-radius: 5px;
-    color: white;
-    cursor: pointer;
-  }
-  #login-screen button:hover {
-    background: #005fa3;
-  }
-  #app {
-    display: flex;
-    height: 100%;
-  }
-  #sidebar {
-    width: 300px;
-    background: #1e1e1e;
-    border-right: 2px solid #333;
-    overflow-y: auto;
-    padding: 15px;
-  }
-  #sidebar h2 {
-    margin-top: 0;
-  }
-  #sidebar ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-  #sidebar ul li {
-    padding: 10px;
-    margin-bottom: 5px;
-    background: #2e2e2e;
-    border-radius: 5px;
-    cursor: pointer;
-  }
-  #sidebar ul li.selected {
-    background: #0078d7;
-    font-weight: bold;
-  }
-  #main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 15px;
-    overflow-y: auto;
-    background: #181818;
-  }
-  #user-info {
-    font-weight: bold;
-    margin-bottom: 10px;
-  }
-  #case-desc {
-    font-size: 1.1em;
-    margin-bottom: 10px;
-  }
-  #radio-log, #weapon-log {
-    white-space: pre-wrap;
-    background: #252525;
-    padding: 10px;
-    margin-bottom: 15px;
-    border-radius: 5px;
-    max-height: 150px;
-    overflow-y: auto;
-  }
-  #weapon-log ul {
-    margin: 0; padding-left: 20px;
-  }
-  #witness-list, #suspect-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    margin-bottom: 15px;
-  }
-  .person-card {
-    background: #2a2a2a;
-    border-radius: 8px;
-    padding: 10px;
-    width: 250px;
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-    flex-direction: column;
-  }
-  .person-card img {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    object-fit: cover;
-    align-self: center;
-  }
-  .person-name {
-    font-weight: bold;
-    font-size: 1.1em;
-    text-align: center;
-  }
-  .person-details {
-    font-size: 0.9em;
-    color: #bbb;
-  }
-  .person-actions {
-    margin-top: auto;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    justify-content: center;
-  }
-  .person-actions button {
-    background: #0078d7;
-    border: none;
-    border-radius: 5px;
-    padding: 5px 8px;
-    color: white;
-    cursor: pointer;
-    font-size: 0.9em;
-    flex: 1 1 auto;
-    min-width: 80px;
-  }
-  .person-actions button:hover {
-    background: #005fa3;
-  }
-  .convict-checkbox-label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 10px;
-    font-size: 0.9em;
-    justify-content: center;
-  }
-  #controls {
-    text-align: center;
-    margin-top: auto;
-  }
-  #convict-btn, #next-case-btn, #logout-btn {
-    background: #28a745;
-    border: none;
-    color: white;
-    padding: 12px 25px;
-    font-size: 1.1em;
-    border-radius: 5px;
-    cursor: pointer;
-    margin: 0 8px;
-  }
-  #convict-btn:disabled {
-    background: #555;
-    cursor: default;
-  }
-  #next-case-btn {
-    background: #17a2b8;
-  }
-  #logout-btn {
-    background: #dc3545;
-    position: fixed;
-    top: 15px;
-    right: 15px;
-    padding: 8px 14px;
-    font-size: 1em;
-    z-index: 1000;
-  }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🚓 Detective Case Manager</title>
+  <style>
+    /* Reset & base */
+    * {
+      box-sizing: border-box;
+    }
+    body, html {
+      margin: 0; padding: 0;
+      height: 100%;
+      background: #121212;
+      color: #ddd;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      user-select: none;
+    }
 
-  /* Modal styles */
-  .modal-overlay {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.8);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 2000;
-  }
-  .modal {
-    background: #222;
-    border-radius: 10px;
-    width: 90%;
-    max-width: 600px;
-    max-height: 90vh;
-    overflow-y: auto;
-    padding: 20px;
-    box-shadow: 0 0 20px #0078d7;
-    color: #eee;
-    position: relative;
-  }
-  .modal h3 {
-    margin-top: 0;
-  }
-  .modal textarea {
-    width: 100%;
-    height: 300px;
-    background: #1a1a1a;
-    border: none;
-    border-radius: 8px;
-    color: #eee;
-    font-family: monospace;
-    font-size: 1em;
-    padding: 10px;
-    resize: none;
-  }
-  .modal-content-scroll {
-    max-height: 300px;
-    overflow-y: auto;
-    font-size: 1em;
-    line-height: 1.4em;
-    background: #1a1a1a;
-    border-radius: 8px;
-    padding: 12px;
-    white-space: pre-wrap;
-  }
-  .modal button.close-btn {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    background: #dc3545;
-    border: none;
-    color: white;
-    padding: 6px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: bold;
-  }
-  .modal button.close-btn:hover {
-    background: #a30000;
-  }
-  .modal button.action-btn {
-    background: #0078d7;
-    border: none;
-    color: white;
-    padding: 10px 18px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: bold;
-    margin: 10px 5px 0 0;
-  }
-  .modal button.action-btn:hover {
-    background: #005fa3;
-  }
-  .modal .info-text {
-    margin-top: 12px;
-    font-style: italic;
-  }
+    header {
+      background: linear-gradient(90deg,#2563eb,#3b82f6);
+      padding: 1rem 2rem;
+      text-align: center;
+      font-weight: 900;
+      font-size: 1.8rem;
+      color: #e0e7ff;
+      letter-spacing: 0.05em;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+      flex-shrink: 0;
+      z-index: 10;
+    }
 
-  /* Scrollbar for modal and logs */
-  textarea, .modal-content-scroll, #radio-log, #weapon-log {
-    scrollbar-width: thin;
-    scrollbar-color: #0078d7 #121212;
-  }
-  textarea::-webkit-scrollbar, .modal-content-scroll::-webkit-scrollbar, #radio-log::-webkit-scrollbar, #weapon-log::-webkit-scrollbar {
-    width: 8px;
-  }
-  textarea::-webkit-scrollbar-track, .modal-content-scroll::-webkit-scrollbar-track, #radio-log::-webkit-scrollbar-track, #weapon-log::-webkit-scrollbar-track {
-    background: #121212;
-  }
-  textarea::-webkit-scrollbar-thumb, .modal-content-scroll::-webkit-scrollbar-thumb, #radio-log::-webkit-scrollbar-thumb, #weapon-log::-webkit-scrollbar-thumb {
-    background-color: #0078d7;
-    border-radius: 4px;
-  }
-</style>
+    main {
+      flex-grow: 1;
+      display: flex;
+      background: #1e293b;
+      padding: 1rem 2rem;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Loading screen */
+    #loadingScreen {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(135deg,#2563eb,#3b82f6);
+      color: white;
+      font-size: 2.2rem;
+      font-weight: 900;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 99999;
+      flex-direction: column;
+      gap: 1rem;
+      user-select: none;
+      transition: opacity 0.5s ease;
+    }
+
+    #loadingScreen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #loadingSpinner {
+      border: 5px solid rgba(255,255,255,0.3);
+      border-top: 5px solid white;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Login screen */
+    #loginScreen {
+      margin: auto;
+      max-width: 380px;
+      width: 100%;
+      background: #273449;
+      border-radius: 12px;
+      padding: 2rem 2.5rem;
+      box-shadow: 0 8px 16px rgb(0 0 0 / 0.7);
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      user-select: text;
+    }
+
+    #loginScreen label {
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: #cbd5e1;
+    }
+
+    #loginScreen input[type="text"] {
+      font-size: 1.1rem;
+      padding: 0.6rem 1rem;
+      border-radius: 8px;
+      border: none;
+      background: #0f172a;
+      color: #e0e7ff;
+      outline-offset: 2px;
+      outline-color: #2563eb;
+      transition: background-color 0.25s ease;
+    }
+    #loginScreen input[type="text"]::placeholder {
+      color: #94a3b8;
+    }
+    #loginScreen input[type="text"]:focus {
+      background: #1e293b;
+    }
+
+    #loginScreen button {
+      font-weight: 700;
+      background: #3b82f6;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      padding: 0.7rem;
+      font-size: 1.15rem;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+    #loginScreen button:hover:not(:disabled) {
+      background: #2563eb;
+    }
+    #loginScreen button:disabled {
+      background: #64748b;
+      cursor: not-allowed;
+    }
+
+    /* Main app UI */
+    #app {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+      gap: 1rem;
+      overflow: hidden;
+    }
+
+    #topBar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #2563eb;
+      color: white;
+      padding: 0.6rem 1rem;
+      font-weight: 600;
+      font-size: 1.05rem;
+      border-radius: 0 0 12px 12px;
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    #topBar .status {
+      user-select: text;
+    }
+
+    #caseContainer {
+      flex-grow: 1;
+      display: flex;
+      gap: 1rem;
+      overflow: hidden;
+      padding: 1rem;
+      box-sizing: border-box;
+    }
+
+    #caseList {
+      width: 300px;
+      background: #273449;
+      border-radius: 12px;
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      user-select: none;
+    }
+
+    .caseItem {
+      background: #334155;
+      padding: 0.7rem 1rem;
+      border-radius: 10px;
+      color: #e0e7ff;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background-color 0.25s ease;
+      border: 2px solid transparent;
+      user-select: none;
+    }
+    .caseItem:hover {
+      background: #2563eb;
+    }
+    .caseItem.selected {
+      background: #60a5fa;
+      border-color: #1e40af;
+    }
+
+    #caseDetail {
+      flex-grow: 1;
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      color: #ddd;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      user-select: text;
+      scroll-behavior: smooth;
+    }
+
+    #caseDetail h2 {
+      margin-top: 0;
+      font-weight: 800;
+      font-size: 1.6rem;
+      color: #e0e7ff;
+      user-select: text;
+    }
+    #caseDetail p {
+      line-height: 1.35;
+      font-size: 1rem;
+      margin-top: 0;
+      user-select: text;
+    }
+
+    /* Suspects & Witnesses */
+    .sectionBlock {
+      background: #273449;
+      border-radius: 12px;
+      padding: 1rem;
+      box-sizing: border-box;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .sectionBlock h3 {
+      margin-top: 0;
+      margin-bottom: 0.8rem;
+      font-weight: 700;
+      font-size: 1.2rem;
+      color: #e0e7ff;
+      user-select: text;
+    }
+
+    .suspectCard {
+      background: #334155;
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.8rem;
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      color: #f1f5f9;
+      user-select: text;
+      position: relative;
+    }
+
+    .suspectImg {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid #64748b;
+      flex-shrink: 0;
+      background: #0f172a;
+    }
+
+    .suspectInfo {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .suspectName {
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: #cbd5e1;
+      user-select: text;
+    }
+    .suspectSubText {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      user-select: text;
+    }
+
+    .suspectActions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      align-items: center;
+      user-select: none;
+    }
+
+    .btnSmall {
+      font-size: 0.85rem;
+      padding: 0.3rem 0.7rem;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.25s ease;
+      color: white;
+      font-weight: 600;
+      background: #2563eb;
+      white-space: nowrap;
+    }
+    .btnSmall:disabled {
+      background: #64748b;
+      cursor: not-allowed;
+    }
+    .btnSmall:hover:not(:disabled) {
+      background: #1e40af;
+    }
+
+    /* Checkboxes */
+    input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
+    /* Buttons container */
+    #caseActions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      padding-top: 0.7rem;
+      user-select: none;
+    }
+
+    #caseActions button {
+      font-weight: 700;
+      background: #3b82f6;
+      border: none;
+      border-radius: 10px;
+      color: white;
+      padding: 0.7rem 1.3rem;
+      font-size: 1.05rem;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    #caseActions button:disabled {
+      background: #64748b;
+      cursor: not-allowed;
+    }
+    #caseActions button:hover:not(:disabled) {
+      background: #2563eb;
+    }
+
+    /* Logs */
+    .logPanel {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 0.8rem 1rem;
+      max-height: 150px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.95rem;
+      color: #cbd5e1;
+      user-select: text;
+    }
+
+    /* Modal backdrop */
+    .modalBackdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      user-select: none;
+    }
+    .modalBackdrop.hidden {
+      display: none;
+    }
+
+    /* Modal */
+    .modalContent {
+      background: #1e293b;
+      padding: 2rem 2.5rem;
+      border-radius: 15px;
+      max-width: 600px;
+      max-height: 80vh;
+      overflow-y: auto;
+      color: #ddd;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      user-select: text;
+      box-shadow: 0 8px 16px rgb(0 0 0 / 0.8);
+    }
+
+    .modalContent h3 {
+      margin-top: 0;
+      font-weight: 800;
+      font-size: 1.7rem;
+      color: #e0e7ff;
+      user-select: text;
+    }
+
+    .modalContent p {
+      font-size: 1rem;
+      user-select: text;
+      line-height: 1.3;
+    }
+
+    .modalLog {
+      background: #0f172a;
+      padding: 1rem;
+      border-radius: 10px;
+      border: 1px solid #334155;
+      font-family: monospace;
+      font-size: 0.9rem;
+      max-height: 250px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      user-select: text;
+    }
+
+    .modalActions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      margin-top: 1rem;
+      user-select: none;
+    }
+
+    .modalActions button {
+      background: #2563eb;
+      border: none;
+      border-radius: 10px;
+      padding: 0.7rem 1.3rem;
+      color: white;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    .modalActions button:hover {
+      background: #1e40af;
+    }
+    .modalActions button:disabled {
+      background: #64748b;
+      cursor: not-allowed;
+    }
+
+    /* Scrollbar style */
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1e293b;
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2563eb;
+      border-radius: 10px;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      #caseContainer {
+        flex-direction: column;
+      }
+      #caseList {
+        width: 100%;
+        max-height: 220px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        display: flex;
+        gap: 0.8rem;
+        padding: 0.5rem 1rem;
+      }
+      .caseItem {
+        flex-shrink: 0;
+        min-width: 150px;
+        border-radius: 12px;
+        text-align: center;
+        font-size: 0.9rem;
+      }
+      #caseDetail {
+        max-height: none;
+        overflow-y: auto;
+        padding: 1rem;
+      }
+      #caseActions {
+        justify-content: center;
+      }
+      .suspectCard {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .suspectActions {
+        width: 100%;
+        justify-content: flex-start;
+      }
+    }
+
+  </style>
 </head>
-<body class="fullscreen">
+<body>
 
-<!-- Loading Screen -->
-<div id="loading-screen" class="">Loading... Please wait</div>
+<header>🚓 Detective Case Manager</header>
+
+<!-- Loading screen -->
+<div id="loadingScreen" aria-live="polite" role="alert" >
+  <div id="loadingSpinner" aria-hidden="true"></div>
+  <div>Loading Detective App...</div>
+</div>
 
 <!-- Login Screen -->
-<div id="login-screen" class="hidden" role="dialog" aria-modal="true" aria-labelledby="login-title">
-  <h2 id="login-title">Officer Login</h2>
-  <input id="username-input" type="text" placeholder="Enter your officer name" aria-label="Officer name" autocomplete="off" />
-  <button id="login-btn">Login</button>
+<div id="loginScreen" style="display:none;">
+  <label for="officerNameInput">Enter Your Officer Name</label>
+  <input type="text" id="officerNameInput" placeholder="e.g. Officer Johnson" autocomplete="off" />
+  <button id="loginBtn" disabled>Login</button>
 </div>
 
 <!-- Main App -->
-<div id="app" class="hidden" role="main" aria-live="polite" aria-atomic="true" aria-label="Police investigation interface">
-  <button id="logout-btn" aria-label="Logout">Logout</button>
-  <div id="sidebar" aria-label="Case list">
-    <h2>Cases</h2>
-    <ul id="cases-ul" tabindex="0" role="listbox" aria-activedescendant=""></ul>
-    <div id="user-info" aria-live="polite" aria-atomic="true"></div>
+<div id="app" style="display:none;" role="main" aria-label="Detective Case Manager Application">
+  <div id="topBar" aria-live="polite" aria-atomic="true">
+    Officer: <span id="officerNameDisplay"></span> | Cases Completed: <span id="casesCompletedCount">0</span>
   </div>
-  <div id="main">
-    <div id="case-desc" tabindex="0"></div>
-    <div id="radio-log" aria-label="Radio log" tabindex="0" role="region"></div>
-    <div id="weapon-log" aria-label="Weapon log" tabindex="0" role="region"><ul></ul></div>
 
-    <h3>Witnesses</h3>
-    <div id="witness-list" aria-label="Witnesses"></div>
+  <div id="caseContainer">
+    <div id="caseList" role="list" aria-label="List of active cases">
+      <!-- Case items inserted here -->
+    </div>
 
-    <h3>Suspects</h3>
-    <div id="suspect-list" aria-label="Suspects"></div>
-
-    <div id="controls">
-      <button id="convict-btn" disabled aria-disabled="true">Convict Selected Suspects</button>
-      <button id="next-case-btn" class="hidden">Next Case</button>
+    <div id="caseDetail" tabindex="0" aria-live="polite" aria-atomic="true">
+      <!-- Details of selected case -->
+      <em>Select a case to view details.</em>
     </div>
   </div>
-</div>
 
-<!-- Interview Modal -->
-<div id="interview-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="interview-title">
-  <div class="modal">
-    <h3 id="interview-title"></h3>
-    <textarea id="interview-log" readonly></textarea>
-    <button class="close-btn" id="close-interview-btn" aria-label="Close interview">Close</button>
+  <div id="caseActions">
+    <button id="btnCompleteCase" disabled>Complete Case</button>
   </div>
 </div>
 
-<!-- Records Modal -->
-<div id="records-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="records-title">
-  <div class="modal">
-    <h3 id="records-title"></h3>
-    <div id="records-content" class="modal-content-scroll"></div>
-    <button class="close-btn" id="close-records-btn" aria-label="Close records">Close</button>
-  </div>
-</div>
-
-<!-- Warrant Modal -->
-<div id="warrant-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="warrant-title">
-  <div class="modal">
-    <h3 id="warrant-title">Warrant Request</h3>
-    <div id="warrant-result" class="info-text" style="font-size:1.3em; font-weight:bold; margin-bottom:10px;"></div>
-    <button class="action-btn" id="court-case-btn" style="display:none;">Request Court Case</button>
-    <div id="court-case-info" class="info-text"></div>
-    <button class="action-btn" id="search-warrant-findings-btn" style="display:none;">View Search Warrant Findings</button>
-    <div id="search-warrant-findings-info" class="info-text"></div>
-    <button class="close-btn" id="close-warrant-btn" aria-label="Close warrant modal">Close</button>
+<!-- Modal container -->
+<div id="modal" class="modalBackdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalDesc">
+  <div class="modalContent">
+    <h3 id="modalTitle">Modal Title</h3>
+    <div id="modalDesc" style="margin-top: 0.5rem;">Modal content here.</div>
+    <div class="modalActions" id="modalActions"></div>
   </div>
 </div>
 
 <script>
 (() => {
-  "use strict";
+  'use strict';
 
-  // --- Data structures and initial cases ---
+  // State variables
+  let officerName = null;
+  let casesCompleted = 0;
 
-  // Example data for cases - You would add up to 100 similarly
+  // Cases data (example)
   const cases = [
     {
       id: 1,
-      title: "The Park Robbery",
-      description: "A robbery occurred in Central Park. Several witnesses and suspects have been identified.",
-      radioLog: "Dispatch: Robbery reported near Central Park.\nUnit 12: En route.",
-      weaponLog: ["Knife found near the scene", "Gun reported by witness"],
-      witnesses: [
-        {
-          id: 101,
-          name: "Alice Johnson",
-          headshot: "https://i.pravatar.cc/80?img=5",
-          statement: "I saw someone running away with a backpack.",
-          medicalRecords: "No known medical issues.",
-          arrestRecords: "No prior arrests."
-        },
-        {
-          id: 102,
-          name: "Mark Lee",
-          headshot: "https://i.pravatar.cc/80?img=15",
-          statement: "He had a black hoodie and looked nervous.",
-          medicalRecords: "Asthma, controlled with medication.",
-          arrestRecords: "No prior arrests."
-        }
-      ],
+      name: "Robbery at Downtown Bank",
+      description: "Suspects robbed the main bank downtown, escaping with cash and valuables.",
       suspects: [
-        {
-          id: 201,
-          name: "John Smith",
-          headshot: "https://i.pravatar.cc/80?img=45",
-          statement: "I was nowhere near the park.",
-          medicalRecords: "High blood pressure.",
-          arrestRecords: "One DUI 3 years ago.",
-          searchWarrantFindings: "Found stolen goods in his apartment.",
-          warrant: false,
-          searchWarrantApproved: false,
-          detained: false,
-          convicted: false
-        },
-        {
-          id: 202,
-          name: "Sara Green",
-          headshot: "https://i.pravatar.cc/80?img=32",
-          statement: "I don’t know anything about the robbery.",
-          medicalRecords: "Healthy.",
-          arrestRecords: "No prior arrests.",
-          searchWarrantFindings: null,
-          warrant: false,
-          searchWarrantApproved: false,
-          detained: false,
-          convicted: false
-        }
+        { id: 101, name: "Jake Matthews", age: 32, img: "https://randomuser.me/api/portraits/men/21.jpg", wanted: true, arrested: false, warrant: null, findings: null, detained: false },
+        { id: 102, name: "Linda Park", age: 28, img: "https://randomuser.me/api/portraits/women/44.jpg", wanted: false, arrested: false, warrant: null, findings: null, detained: false },
       ],
-      solved: false,
-      correctConviction: false,
-      completed: false,
-      completedTime: null
+      witnesses: [
+        { id: 201, name: "Mark Stevens", age: 40, img: "https://randomuser.me/api/portraits/men/35.jpg", statement: "Saw two suspects running from the bank wearing masks." }
+      ],
+      status: "active",
+      logs: [],
     },
-    // You can add more cases here for testing or bulk generate later
+    {
+      id: 2,
+      name: "Vandalism at Central Park",
+      description: "Graffiti and destruction of public property during the night.",
+      suspects: [
+        { id: 103, name: "Alex Kim", age: 22, img: "https://randomuser.me/api/portraits/men/78.jpg", wanted: false, arrested: false, warrant: null, findings: null, detained: false },
+      ],
+      witnesses: [
+        { id: 202, name: "Sarah Collins", age: 25, img: "https://randomuser.me/api/portraits/women/50.jpg", statement: "Heard noises around midnight and saw a suspicious figure." }
+      ],
+      status: "active",
+      logs: [],
+    },
+    {
+      id: 3,
+      name: "Missing Person: John Doe",
+      description: "Investigation into the disappearance of John Doe, last seen near the river.",
+      suspects: [
+        { id: 104, name: "Martha Green", age: 55, img: "https://randomuser.me/api/portraits/women/65.jpg", wanted: false, arrested: false, warrant: null, findings: null, detained: false },
+      ],
+      witnesses: [],
+      status: "active",
+      logs: [],
+    },
   ];
 
-  // --- Variables to track state ---
-  let userName = null;
-  let casesCompleted = 0;
-  let selectedCaseIndex = null;
-  let selectedSuspectIds = new Set();
-
-  // --- DOM Elements ---
-  const loadingScreen = document.getElementById('loading-screen');
-  const loginScreen = document.getElementById('login-screen');
-  const usernameInput = document.getElementById('username-input');
-  const loginBtn = document.getElementById('login-btn');
-  const logoutBtn = document.getElementById('logout-btn');
+  // DOM references
+  const loadingScreen = document.getElementById('loadingScreen');
+  const loginScreen = document.getElementById('loginScreen');
+  const officerNameInput = document.getElementById('officerNameInput');
+  const loginBtn = document.getElementById('loginBtn');
   const app = document.getElementById('app');
-  const casesUl = document.getElementById('cases-ul');
-  const userInfo = document.getElementById('user-info');
-  const caseDesc = document.getElementById('case-desc');
-  const radioLog = document.getElementById('radio-log');
-  const weaponLog = document.getElementById('weapon-log').querySelector('ul');
-  const witnessList = document.getElementById('witness-list');
-  const suspectList = document.getElementById('suspect-list');
-  const convictBtn = document.getElementById('convict-btn');
-  const nextCaseBtn = document.getElementById('next-case-btn');
+  const officerNameDisplay = document.getElementById('officerNameDisplay');
+  const casesCompletedCount = document.getElementById('casesCompletedCount');
+  const caseList = document.getElementById('caseList');
+  const caseDetail = document.getElementById('caseDetail');
+  const btnCompleteCase = document.getElementById('btnCompleteCase');
+  const modal = document.getElementById('modal');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalDesc = document.getElementById('modalDesc');
+  const modalActions = document.getElementById('modalActions');
 
-  // Modals
-  const interviewModal = document.getElementById('interview-modal');
-  const interviewTitle = document.getElementById('interview-title');
-  const interviewLog = document.getElementById('interview-log');
-  const closeInterviewBtn = document.getElementById('close-interview-btn');
+  // Current selected case id
+  let selectedCaseId = null;
 
-  const recordsModal = document.getElementById('records-modal');
-  const recordsTitle = document.getElementById('records-title');
-  const recordsContent = document.getElementById('records-content');
-  const closeRecordsBtn = document.getElementById('close-records-btn');
-
-  const warrantModal = document.getElementById('warrant-modal');
-  const warrantResult = document.getElementById('warrant-result');
-  const courtCaseBtn = document.getElementById('court-case-btn');
-  const courtCaseInfo = document.getElementById('court-case-info');
-  const searchWarrantFindingsBtn = document.getElementById('search-warrant-findings-btn');
-  const searchWarrantFindingsInfo = document.getElementById('search-warrant-findings-info');
-  const closeWarrantBtn = document.getElementById('close-warrant-btn');
-
-  // --- Utility ---
-  function delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  // --- Local Storage Keys ---
-  const STORAGE_KEY_NAME = 'police_sim_username';
-  const STORAGE_KEY_COMPLETED = 'police_sim_cases_completed';
-
-  // --- Save and Load ---
-  function saveUserData() {
-    if(userName) {
-      localStorage.setItem(STORAGE_KEY_NAME, userName);
-      localStorage.setItem(STORAGE_KEY_COMPLETED, casesCompleted);
+  // -----------------------
+  // Utility functions
+  // -----------------------
+  function saveOfficerName(name) {
+    try {
+      localStorage.setItem('officerName', name);
+    } catch(e) {
+      // ignore
     }
   }
-  function loadUserData() {
-    const savedName = localStorage.getItem(STORAGE_KEY_NAME);
-    if(savedName) {
-      userName = savedName;
+
+  function loadOfficerName() {
+    try {
+      return localStorage.getItem('officerName');
+    } catch(e) {
+      return null;
     }
-    const savedCompleted = localStorage.getItem(STORAGE_KEY_COMPLETED);
-    casesCompleted = savedCompleted ? Number(savedCompleted) : 0;
   }
 
-  // --- UI Updates ---
-  function showLoadingScreen() {
-    loadingScreen.classList.remove('hidden');
-    loginScreen.classList.add('hidden');
-    app.classList.add('hidden');
-  }
-  function hideLoadingScreen() {
+  // Show loading, then show login or app
+  function hideLoadingAndShowNext() {
     loadingScreen.classList.add('hidden');
+    setTimeout(() => {
+      loadingScreen.style.display = 'none';
+      if (officerName) {
+        showApp();
+      } else {
+        showLogin();
+      }
+    }, 500);
   }
-  function showLoginScreen() {
-    loginScreen.classList.remove('hidden');
-    app.classList.add('hidden');
-    loadingScreen.classList.add('hidden');
+
+  // Show login screen
+  function showLogin() {
+    loginScreen.style.display = 'flex';
+    app.style.display = 'none';
+    officerNameInput.focus();
   }
-  function hideLoginScreen() {
-    loginScreen.classList.add('hidden');
-  }
+
+  // Show main app UI
   function showApp() {
-    app.classList.remove('hidden');
-    loginScreen.classList.add('hidden');
-    loadingScreen.classList.add('hidden');
+    loginScreen.style.display = 'none';
+    app.style.display = 'flex';
+    officerNameDisplay.textContent = officerName;
+    casesCompletedCount.textContent = casesCompleted;
+    renderCaseList();
   }
 
-  function updateUserInfo() {
-    userInfo.textContent = `Officer: ${userName} | Cases Completed: ${casesCompleted}`;
-  }
-
-  function clearCaseDetail() {
-    caseDesc.textContent = '';
-    radioLog.textContent = '';
-    weaponLog.innerHTML = '';
-    witnessList.innerHTML = '';
-    suspectList.innerHTML = '';
-    convictBtn.disabled = true;
-    convictBtn.setAttribute('aria-disabled', 'true');
-    nextCaseBtn.classList.add('hidden');
-    selectedSuspectIds.clear();
-    selectedCaseIndex = null;
-  }
-
-  // --- Render Functions ---
+  // Render list of cases
   function renderCaseList() {
-    casesUl.innerHTML = '';
-    cases.forEach((c, i) => {
-      if(c.completed) return; // Hide completed cases
-      const li = document.createElement('li');
-      li.textContent = c.title;
-      li.id = `case-item-${c.id}`;
-      li.tabIndex = 0;
-      li.setAttribute('role', 'option');
-      li.setAttribute('aria-selected', selectedCaseIndex === i ? 'true' : 'false');
-      if(selectedCaseIndex === i) {
-        li.classList.add('selected');
-        casesUl.setAttribute('aria-activedescendant', li.id);
-      }
-      li.addEventListener('click', () => {
-        selectCase(i);
+    caseList.innerHTML = '';
+    cases.forEach(c => {
+      if (c.status !== 'active') return; // Only active cases
+      const div = document.createElement('div');
+      div.className = 'caseItem' + (c.id === selectedCaseId ? ' selected' : '');
+      div.textContent = c.name;
+      div.setAttribute('role', 'listitem');
+      div.tabIndex = 0;
+      div.addEventListener('click', () => {
+        selectCase(c.id);
       });
-      li.addEventListener('keydown', e => {
-        if(e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          selectCase(i);
+      div.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') {
+          ev.preventDefault();
+          selectCase(c.id);
         }
       });
-      casesUl.appendChild(li);
+      caseList.appendChild(div);
     });
+    if (selectedCaseId === null) {
+      // Select first active case automatically
+      const firstActive = cases.find(c => c.status === 'active');
+      if (firstActive) selectCase(firstActive.id);
+    }
   }
 
-  function selectCase(index) {
-    selectedCaseIndex = index;
-    selectedSuspectIds.clear();
+  // Select a case by id
+  function selectCase(id) {
+    if (selectedCaseId === id) return;
+    selectedCaseId = id;
     renderCaseList();
-    renderCaseDetail();
+    renderCaseDetails();
   }
 
-  function renderCaseDetail() {
-    if(selectedCaseIndex === null) {
-      clearCaseDetail();
+  // Render details for selected case
+  function renderCaseDetails() {
+    const c = cases.find(c => c.id === selectedCaseId);
+    if (!c) {
+      caseDetail.innerHTML = '<em>No case selected.</em>';
+      btnCompleteCase.disabled = true;
       return;
     }
-    const c = cases[selectedCaseIndex];
-    caseDesc.textContent = c.description;
-    radioLog.textContent = c.radioLog;
-    weaponLog.innerHTML = '';
-    c.weaponLog = c.weaponLog || c.weaponLog || c.weaponLog === undefined ? c.weaponLog || [] : [];
-    if(Array.isArray(c.weaponLog)) {
-      for(let w of c.weaponLog) {
-        const li = document.createElement('li');
-        li.textContent = w;
-        weaponLog.appendChild(li);
-      }
+
+    btnCompleteCase.disabled = false;
+
+    // Build HTML
+    let html = `<h2>${escapeHtml(c.name)}</h2>`;
+    html += `<p>${escapeHtml(c.description)}</p>`;
+
+    // Suspects section
+    html += `<div class="sectionBlock"><h3>Suspects</h3>`;
+    if (c.suspects.length === 0) {
+      html += `<p><em>No suspects yet.</em></p>`;
+    } else {
+      c.suspects.forEach(s => {
+        html += suspectCardHtml(s, c);
+      });
     }
-    // Witnesses
-    witnessList.innerHTML = '';
-    c.witnesses.forEach(w => {
-      witnessList.appendChild(createPersonCard(w, false));
-    });
-    // Suspects
-    suspectList.innerHTML = '';
+    html += `</div>`;
+
+    // Witnesses section
+    html += `<div class="sectionBlock"><h3>Witnesses</h3>`;
+    if (c.witnesses.length === 0) {
+      html += `<p><em>No witnesses yet.</em></p>`;
+    } else {
+      c.witnesses.forEach(w => {
+        html += witnessCardHtml(w);
+      });
+    }
+    html += `</div>`;
+
+    // Logs
+    html += `<div class="sectionBlock" aria-label="Case Logs"><h3>Case Logs</h3>`;
+    if (c.logs.length === 0) {
+      html += `<p><em>No logs yet.</em></p>`;
+    } else {
+      html += `<div class="logPanel">${escapeHtml(c.logs.join('\n'))}</div>`;
+    }
+    html += `</div>`;
+
+    caseDetail.innerHTML = html;
+
+    // Attach event handlers for buttons in suspects
     c.suspects.forEach(s => {
-      suspectList.appendChild(createPersonCard(s, true));
+      attachSuspectButtons(s, c);
     });
-
-    convictBtn.disabled = selectedSuspectIds.size === 0;
-    convictBtn.setAttribute('aria-disabled', selectedSuspectIds.size === 0 ? 'true' : 'false');
   }
 
-  function createPersonCard(person, isSuspect) {
-    const card = document.createElement('div');
-    card.className = 'person-card';
-
-    const img = document.createElement('img');
-    img.src = person.headshot;
-    img.alt = `Headshot of ${person.name}`;
-    card.appendChild(img);
-
-    const name = document.createElement('div');
-    name.className = 'person-name';
-    name.textContent = person.name;
-    card.appendChild(name);
-
-    const details = document.createElement('div');
-    details.className = 'person-details';
-    details.textContent = person.statement;
-    card.appendChild(details);
-
-    const actions = document.createElement('div');
-    actions.className = 'person-actions';
-
-    // Interview Button
-    const interviewBtn = document.createElement('button');
-    interviewBtn.textContent = 'Interview';
-    interviewBtn.onclick = () => openInterviewModal(person);
-    actions.appendChild(interviewBtn);
-
-    // Records Button (medical + arrest)
-    const recordsBtn = document.createElement('button');
-    recordsBtn.textContent = 'Records';
-    recordsBtn.onclick = () => openRecordsModal(person);
-    actions.appendChild(recordsBtn);
-
-    if(isSuspect) {
-      // Warrant Button
-      const warrantBtn = document.createElement('button');
-      warrantBtn.textContent = 'Request Warrant';
-      warrantBtn.onclick = () => requestWarrant(person);
-      actions.appendChild(warrantBtn);
-
-      // Detain Button
-      const detainBtn = document.createElement('button');
-      detainBtn.textContent = person.detained ? 'Detained' : 'Detain';
-      detainBtn.disabled = person.detained;
-      detainBtn.onclick = () => {
-        detainSuspect(person);
-        detainBtn.textContent = 'Detained';
-        detainBtn.disabled = true;
-      };
-      actions.appendChild(detainBtn);
-
-      // Convict Checkbox
-      const convictLabel = document.createElement('label');
-      convictLabel.className = 'convict-checkbox-label';
-      const convictCheckbox = document.createElement('input');
-      convictCheckbox.type = 'checkbox';
-      convictCheckbox.checked = selectedSuspectIds.has(person.id);
-      convictCheckbox.onchange = (e) => {
-        if(e.target.checked) {
-          selectedSuspectIds.add(person.id);
-        } else {
-          selectedSuspectIds.delete(person.id);
-        }
-        convictBtn.disabled = selectedSuspectIds.size === 0;
-        convictBtn.setAttribute('aria-disabled', selectedSuspectIds.size === 0 ? 'true' : 'false');
-      };
-      convictLabel.appendChild(convictCheckbox);
-      convictLabel.appendChild(document.createTextNode('Convict'));
-      actions.appendChild(convictLabel);
-    }
-
-    card.appendChild(actions);
-
-    // Add "View Search Warrant" link if approved
-    if(isSuspect && person.searchWarrantApproved) {
-      const warrantViewBtn = document.createElement('button');
-      warrantViewBtn.textContent = 'View Search Warrant';
-      warrantViewBtn.onclick = () => {
-        searchWarrantFindingsInfo.textContent = person.searchWarrantFindings || 'No findings.';
-        searchWarrantFindingsBtn.style.display = 'inline-block';
-        warrantResult.textContent = "APPROVED";
-        courtCaseBtn.style.display = 'none';
-        courtCaseInfo.textContent = '';
-        warrantModal.classList.remove('hidden');
-      };
-      actions.appendChild(warrantViewBtn);
-    }
-
-    return card;
+  // Escape HTML
+  function escapeHtml(text) {
+    if (!text) return '';
+    return text.replace(/&/g, "&amp;")
+               .replace(/</g, "&lt;")
+               .replace(/>/g, "&gt;")
+               .replace(/"/g, "&quot;")
+               .replace(/'/g, "&#039;");
   }
 
-  // --- Modal Functions ---
+  // Generate suspect card HTML
+  function suspectCardHtml(s, c) {
+    let actions = [];
 
-  // Interview modal shows entire interview log at once
-  function openInterviewModal(person) {
-    interviewTitle.textContent = `Interview with ${person.name}`;
-    // For demo: use the statement repeated multiple times as interview log
-    const interviewText = `${person.statement}\n\n---\nFull interview transcript:\n\n${person.statement}\n${person.statement}\n${person.statement}`;
-    interviewLog.textContent = interviewText;
-    interviewModal.classList.remove('hidden');
-  }
-  closeInterviewBtn.onclick = () => interviewModal.classList.add('hidden');
-
-  // Records modal shows medical + arrest records
-  function openRecordsModal(person) {
-    recordsTitle.textContent = `Records for ${person.name}`;
-    recordsContent.innerHTML = `<p><strong>Medical:</strong> ${person.medicalRecords || 'N/A'}</p><p><strong>Arrest:</strong> ${person.arrestRecords || 'N/A'}</p>`;
-    recordsModal.classList.remove('hidden');
-  }
-  closeRecordsBtn.onclick = () => recordsModal.classList.add('hidden');
-
-  // Warrant modal interactions
-  function requestWarrant(person) {
-    if(person.warrant) {
-      alert('Warrant already requested.');
-      return;
-    }
-    // Simulate warrant approval logic
-    person.warrant = true;
-    const approved = Math.random() < 0.7; // 70% chance approved
-    person.searchWarrantApproved = approved;
-    person.searchWarrantFindings = approved ? "Stolen goods and evidence found." : null;
-    warrantResult.textContent = approved ? "APPROVED" : "DENIED";
-    courtCaseBtn.style.display = approved ? 'inline-block' : 'none';
-    courtCaseInfo.textContent = '';
-    searchWarrantFindingsBtn.style.display = 'none';
-    searchWarrantFindingsInfo.textContent = '';
-    warrantModal.classList.remove('hidden');
-
-    // Update UI to show the "View Search Warrant" button if approved next time
-    renderCaseDetail();
-  }
-
-  searchWarrantFindingsBtn.onclick = () => {
-    searchWarrantFindingsInfo.style.display = searchWarrantFindingsInfo.style.display === 'none' ? 'block' : 'none';
-  };
-  closeWarrantBtn.onclick = () => warrantModal.classList.add('hidden');
-
-  // --- Conviction logic ---
-  convictBtn.onclick = () => {
-    if(selectedSuspectIds.size === 0) return;
-    const c = cases[selectedCaseIndex];
-    let correct = false;
-    // Assume correct if any convicted suspect had search warrant approved and findings
-    for(const id of selectedSuspectIds) {
-      const suspect = c.suspects.find(s => s.id === id);
-      if(suspect && suspect.searchWarrantApproved && suspect.searchWarrantFindings) {
-        correct = true;
-        suspect.convicted = true;
-      } else if(suspect) {
-        suspect.convicted = false;
+    // Warrant status and buttons
+    let warrantText = "No warrant requested";
+    if (s.warrant) {
+      if (s.warrant.status === 'approved') {
+        warrantText = `Warrant APPROVED`;
+      } else if (s.warrant.status === 'denied') {
+        warrantText = `Warrant DENIED`;
+      } else if (s.warrant.status === 'pending') {
+        warrantText = `Warrant PENDING`;
       }
     }
-    c.solved = true;
-    c.correctConviction = correct;
-    c.completed = true;
-    c.completedTime = new Date().toISOString();
-    casesCompleted++;
-    saveUserData();
-    updateUserInfo();
-    clearCaseDetail();
-    renderCaseList();
-    nextCaseBtn.classList.remove('hidden');
-  };
 
-  nextCaseBtn.onclick = () => {
-    nextCaseBtn.classList.add('hidden');
-    // Automatically select next available case
-    const nextIndex = cases.findIndex(c => !c.completed);
-    if(nextIndex !== -1) {
-      selectCase(nextIndex);
+    // Button labels per warrant status
+    if (!s.warrant) {
+      actions.push(`<button class="btnSmall btnRequestWarrant" data-suspect-id="${s.id}">Request Warrant</button>`);
+    } else if (s.warrant.status === 'pending') {
+      actions.push(`<span title="Waiting for warrant decision" style="font-style: italic; color: #94a3b8;">Warrant Pending</span>`);
+    } else if (s.warrant.status === 'denied') {
+      actions.push(`<button class="btnSmall btnRequestCourtCase" data-suspect-id="${s.id}">Request Court Case</button>`);
+    } else if (s.warrant.status === 'approved') {
+      actions.push(`<button class="btnSmall btnViewWarrant" data-suspect-id="${s.id}">View Search Warrant</button>`);
+      // Can request findings after warrant approved
+      if (!s.findings) {
+        actions.push(`<button class="btnSmall btnRequestFindings" data-suspect-id="${s.id}">Request Findings</button>`);
+      } else {
+        actions.push(`<span style="font-style: italic; color: #94a3b8;">Findings Submitted</span>`);
+      }
+    }
+
+    // Arrest button (if wanted and no arrest yet)
+    if (s.wanted && !s.arrested) {
+      actions.push(`<button class="btnSmall btnArrestSuspect" data-suspect-id="${s.id}">Arrest</button>`);
+    }
+
+    // Detain unit button
+    if (!s.detained) {
+      actions.push(`<button class="btnSmall btnDetainSuspect" data-suspect-id="${s.id}">Send Unit to Detain</button>`);
     } else {
-      alert('No more cases available.');
+      actions.push(`<span style="font-style: italic; color: #94a3b8;">Suspect Detained</span>`);
     }
-  };
 
-  // --- Login and Initialization ---
-  loginBtn.onclick = () => {
-    const val = usernameInput.value.trim();
-    if(val.length === 0) {
-      alert('Please enter a username.');
-      return;
-    }
-    userName = val;
-    casesCompleted = 0;
-    saveUserData();
-    updateUserInfo();
-    hideLoginScreen();
-    showApp();
-    renderCaseList();
-  };
-
-  logoutBtn.onclick = () => {
-    userName = null;
-    casesCompleted = 0;
-    localStorage.removeItem(STORAGE_KEY_NAME);
-    localStorage.removeItem(STORAGE_KEY_COMPLETED);
-    clearCaseDetail();
-    updateUserInfo();
-    showLoginScreen();
-    hideApp();
-  };
-
-  function hideApp() {
-    app.classList.add('hidden');
+    // Build card
+    return `
+      <div class="suspectCard" id="suspect-${s.id}">
+        <img src="${escapeHtml(s.img)}" alt="Photo of ${escapeHtml(s.name)}" class="suspectImg" loading="lazy" />
+        <div class="suspectInfo">
+          <div class="suspectName">${escapeHtml(s.name)}</div>
+          <div class="suspectSubText">Age: ${s.age} | Wanted: ${s.wanted ? 'Yes' : 'No'} | Arrested: ${s.arrested ? 'Yes' : 'No'}</div>
+          <div class="suspectSubText">Warrant: ${warrantText}</div>
+          <div class="suspectSubText">Detained: ${s.detained ? 'Yes' : 'No'}</div>
+        </div>
+        <div class="suspectActions">${actions.join(' ')}</div>
+      </div>
+    `;
   }
 
-  // On load
-  (async () => {
-    showLoadingScreen();
-    await delay(1500); // simulate loading
-    loadUserData();
-    if(userName) {
-      updateUserInfo();
-      showApp();
-      renderCaseList();
-    } else {
-      showLoginScreen();
+  // Generate witness card HTML
+  function witnessCardHtml(w) {
+    return `
+      <div class="suspectCard" id="witness-${w.id}">
+        <img src="https://randomuser.me/api/portraits/lego/1.jpg" alt="Photo of ${escapeHtml(w.name)}" class="suspectImg" loading="lazy" />
+        <div class="suspectInfo">
+          <div class="suspectName">${escapeHtml(w.name)}</div>
+          <div class="suspectSubText">Age: ${w.age}</div>
+          <div class="suspectSubText"><strong>Statement:</strong> ${escapeHtml(w.statement)}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Attach event listeners to suspect buttons
+  function attachSuspectButtons(s, c) {
+    // Request warrant
+    const btnWarrant = document.querySelector(`#suspect-${s.id} .btnRequestWarrant`);
+    if (btnWarrant) {
+      btnWarrant.addEventListener('click', () => {
+        // Immediately approve or deny
+        const approved = Math.random() < 0.5;
+        s.warrant = {
+          status: approved ? 'approved' : 'denied',
+          date: new Date().toISOString(),
+          courtCaseRequested: false,
+        };
+        addLog(c, `${officerName} requested a search warrant for ${s.name}. Result: ${approved ? 'APPROVED' : 'DENIED'}.`);
+        renderCaseDetails();
+      });
     }
-    hideLoadingScreen();
-  })();
+
+    // Request court case (only if warrant denied)
+    const btnCourt = document.querySelector(`#suspect-${s.id} .btnRequestCourtCase`);
+    if (btnCourt) {
+      btnCourt.addEventListener('click', () => {
+        if (s.warrant && s.warrant.status === 'denied' && !s.warrant.courtCaseRequested) {
+          s.warrant.courtCaseRequested = true;
+          addLog(c, `${officerName} requested a court case for ${s.name} after warrant denial.`);
+          alert(`Court case requested for ${s.name}. Await further instructions.`);
+          renderCaseDetails();
+        }
+      });
+    }
+
+    // View search warrant (if approved)
+    const btnView = document.querySelector(`#suspect-${s.id} .btnViewWarrant`);
+    if (btnView) {
+      btnView.addEventListener('click', () => {
+        showModal(
+          `Search Warrant for ${s.name}`,
+          `<p>The search warrant for <strong>${escapeHtml(s.name)}</strong> was approved on ${new Date(s.warrant.date).toLocaleString()}.</p>`,
+          [{ text: 'Close', onClick: closeModal }]
+        );
+      });
+    }
+
+    // Request findings (only if warrant approved and no findings yet)
+    const btnFindings = document.querySelector(`#suspect-${s.id} .btnRequestFindings`);
+    if (btnFindings) {
+      btnFindings.addEventListener('click', () => {
+        // Simple prompt for findings text
+        const findings = prompt(`Enter findings for ${s.name}:`);
+        if (findings && findings.trim().length > 0) {
+          s.findings = findings.trim();
+          addLog(c, `${officerName} submitted findings for ${s.name}: "${s.findings}"`);
+          renderCaseDetails();
+        }
+      });
+    }
+
+    // Arrest suspect (only if wanted and not arrested)
+    const btnArrest = document.querySelector(`#suspect-${s.id} .btnArrestSuspect`);
+    if (btnArrest) {
+      btnArrest.addEventListener('click', () => {
+        if (s.wanted && !s.arrested) {
+          s.arrested = true;
+          addLog(c, `${officerName} arrested suspect ${s.name}.`);
+          alert(`${s.name} has been arrested.`);
+          renderCaseDetails();
+        }
+      });
+    }
+
+    // Send unit to detain suspect (if not detained)
+    const btnDetain = document.querySelector(`#suspect-${s.id} .btnDetainSuspect`);
+    if (btnDetain) {
+      btnDetain.addEventListener('click', () => {
+        if (!s.detained) {
+          s.detained = true;
+          addLog(c, `${officerName} sent a unit to detain ${s.name}.`);
+          alert(`Unit sent to detain ${s.name}.`);
+          renderCaseDetails();
+        }
+      });
+    }
+  }
+
+  // Add a log entry to case
+  function addLog(c, text) {
+    const timestamp = new Date().toLocaleString();
+    c.logs.push(`[${timestamp}] ${text}`);
+  }
+
+  // Complete the current case
+  btnCompleteCase.addEventListener('click', () => {
+    const c = cases.find(c => c.id === selectedCaseId);
+    if (!c) return;
+
+    showModal(
+      `Complete Case: ${c.name}`,
+      `<p>Are you sure you want to mark this case as completed?</p>`,
+      [
+        {
+          text: 'Yes, Complete',
+          onClick: () => {
+            c.status = 'completed';
+            casesCompleted++;
+            casesCompletedCount.textContent = casesCompleted;
+            addLog(c, `${officerName} marked the case as completed.`);
+            selectedCaseId = null;
+            renderCaseList();
+            renderCaseDetails();
+            closeModal();
+          }
+        },
+        { text: 'Cancel', onClick: closeModal }
+      ]
+    );
+  });
+
+  // Modal control functions
+  function showModal(title, descHtml, actions) {
+    modalTitle.textContent = title;
+    modalDesc.innerHTML = descHtml;
+    modalActions.innerHTML = '';
+    actions.forEach(act => {
+      const btn = document.createElement('button');
+      btn.textContent = act.text;
+      btn.addEventListener('click', act.onClick);
+      modalActions.appendChild(btn);
+    });
+    modal.classList.remove('hidden');
+    modal.focus();
+  }
+
+  function closeModal() {
+    modal.classList.add('hidden');
+  }
+
+  // Login button enablement
+  officerNameInput.addEventListener('input', () => {
+    loginBtn.disabled = officerNameInput.value.trim().length === 0;
+  });
+
+  // Login button click
+  loginBtn.addEventListener('click', () => {
+    officerName = officerNameInput.value.trim();
+    if (officerName.length > 0) {
+      saveOfficerName(officerName);
+      showApp();
+    }
+  });
+
+  // Initialize
+  function init() {
+    officerName = loadOfficerName();
+    hideLoadingAndShowNext();
+  }
+
+  init();
 
 })();
 </script>
+
 </body>
 </html>
-
