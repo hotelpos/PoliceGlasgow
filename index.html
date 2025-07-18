@@ -1,1018 +1,946 @@
 <!DOCTYPE html>
-<html lang="en" >
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>🚓 Detective Case Manager</title>
-  <style>
-    /* Reset & base */
-    * {
-      box-sizing: border-box;
-    }
-    body, html {
-      margin: 0; padding: 0;
-      height: 100%;
-      background: #121212;
-      color: #ddd;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      user-select: none;
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>🚓 Detective Case Manager (100 Cases, Full Logs)</title>
+<style>
+  /* Reset & basics */
+  body, html {
+    margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f0f2f5;
+    color: #222;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    background: #2e3a59;
+    color: white;
+    padding: 1rem;
+    font-size: 1.4rem;
+    font-weight: 700;
+    user-select: none;
+  }
+  #loadingScreen, #loginScreen, #app {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  #loadingScreen {
+    justify-content: center;
+    align-items: center;
+    font-size: 1.2rem;
+    gap: 0.5rem;
+  }
+  #loadingSpinner {
+    border: 5px solid #e0e0e0;
+    border-top: 5px solid #2e3a59;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  #loginScreen {
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+  }
+  #loginScreen input {
+    font-size: 1.1rem;
+    padding: 0.5rem 0.7rem;
+    width: 250px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+  }
+  #loginScreen button {
+    padding: 0.6rem 1rem;
+    font-size: 1rem;
+    background: #2e3a59;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  #loginScreen button:disabled {
+    background: #999;
+    cursor: not-allowed;
+  }
+  #app {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  #topBar {
+    font-weight: 600;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+  }
+  #caseContainer {
+    flex-grow: 1;
+    display: flex;
+    gap: 1rem;
+    overflow: hidden;
+  }
+  #caseList {
+    width: 250px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 0 10px #ccc;
+    overflow-y: auto;
+    padding: 0.5rem;
+  }
+  #caseList .caseItem {
+    padding: 0.6rem 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-bottom: 0.3rem;
+    background: #f8f9fb;
+    transition: background-color 0.2s;
+  }
+  #caseList .caseItem:hover,
+  #caseList .caseItem:focus {
+    background: #d9e0f7;
+    outline: none;
+  }
+  #caseList .caseItem.selected {
+    background: #2e3a59;
+    color: white;
+    font-weight: 700;
+  }
 
-    header {
-      background: linear-gradient(90deg,#2563eb,#3b82f6);
-      padding: 1rem 2rem;
-      text-align: center;
-      font-weight: 900;
-      font-size: 1.8rem;
-      color: #e0e7ff;
-      letter-spacing: 0.05em;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.5);
-      flex-shrink: 0;
-      z-index: 10;
-    }
+  /* Main detail pane */
+  #caseDetail {
+    flex-grow: 1;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 0 15px #bbb;
+    overflow-y: auto;
+    padding: 1rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
 
-    main {
-      flex-grow: 1;
-      display: flex;
-      background: #1e293b;
-      padding: 1rem 2rem;
-      overflow: hidden;
-      position: relative;
-    }
+  #caseDetail h2 {
+    margin-top: 0;
+    color: #2e3a59;
+  }
+  #caseDetail p {
+    font-size: 1rem;
+    line-height: 1.4;
+    color: #444;
+  }
 
-    /* Loading screen */
-    #loadingScreen {
-      position: fixed;
-      inset: 0;
-      background: linear-gradient(135deg,#2563eb,#3b82f6);
-      color: white;
-      font-size: 2.2rem;
-      font-weight: 900;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 99999;
-      flex-direction: column;
-      gap: 1rem;
-      user-select: none;
-      transition: opacity 0.5s ease;
-    }
+  /* Suspects container: flex wrap, no scroll inside, visible all */
+  .suspectsContainer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    max-height: none;
+  }
+  .suspectCard {
+    background: #f8f9fb;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    width: 220px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem;
+    user-select: none;
+  }
+  .suspectImg {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 0.7rem;
+    border: 2px solid #2e3a59;
+  }
+  .suspectName {
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 0.3rem;
+    text-align: center;
+  }
+  .suspectSubText {
+    font-size: 0.85rem;
+    color: #555;
+    margin-bottom: 0.15rem;
+    text-align: center;
+  }
+  .suspectActions {
+    margin-top: 0.8rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    justify-content: center;
+  }
+  .btnSmall {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    background: #2e3a59;
+    color: white;
+    transition: background-color 0.2s;
+    user-select: none;
+  }
+  .btnSmall:hover:not(:disabled) {
+    background: #475a8a;
+  }
+  .btnSmall:disabled {
+    background: #999;
+    cursor: not-allowed;
+  }
+  .logSection {
+    background: #fefefe;
+    border-radius: 8px;
+    padding: 1rem;
+    max-height: 250px;
+    overflow-y: auto;
+    box-shadow: inset 0 0 8px #ddd;
+  }
+  .logSection h3 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+    color: #2e3a59;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 3px;
+  }
+  .logEntry {
+    font-family: monospace;
+    font-size: 0.85rem;
+    line-height: 1.3;
+    margin-bottom: 0.3rem;
+    color: #333;
+    white-space: pre-wrap;
+  }
 
-    #loadingScreen.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
+  /* Witness cards */
+  .witnessCard {
+    background: #f3f6fb;
+    border-radius: 8px;
+    padding: 0.7rem 1rem;
+    margin-bottom: 0.5rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .witnessImg {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #2e3a59;
+  }
+  .witnessInfo {
+    flex-grow: 1;
+  }
+  .witnessName {
+    font-weight: 700;
+    color: #2e3a59;
+    margin-bottom: 0.15rem;
+  }
+  .witnessAge {
+    font-size: 0.85rem;
+    color: #555;
+    margin-bottom: 0.3rem;
+  }
+  .witnessStatement {
+    font-style: italic;
+    font-size: 0.9rem;
+    color: #444;
+  }
 
-    #loadingSpinner {
-      border: 5px solid rgba(255,255,255,0.3);
-      border-top: 5px solid white;
-      border-radius: 50%;
-      width: 60px;
-      height: 60px;
-      animation: spin 1s linear infinite;
-    }
+  /* Case action button */
+  #caseActions {
+    margin-top: 1rem;
+    text-align: center;
+  }
+  #btnCompleteCase {
+    background: #27a844;
+    border: none;
+    padding: 0.7rem 1.3rem;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: white;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.3s;
+  }
+  #btnCompleteCase:disabled {
+    background: #999;
+    cursor: not-allowed;
+  }
+  #btnCompleteCase:hover:not(:disabled) {
+    background: #1f8233;
+  }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+  /* Modal */
+  .modalBackdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(30,30,30,0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 99;
+  }
+  .hidden { display: none !important; }
+  .modalContent {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem 2rem;
+    max-width: 400px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+  }
+  .modalContent h3 {
+    margin-top: 0;
+    color: #2e3a59;
+  }
+  .modalActions {
+    margin-top: 1.3rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.8rem;
+  }
+  .modalActions button {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: 700;
+    user-select: none;
+  }
+  .modalActions button:first-child {
+    background: #2e3a59;
+    color: white;
+  }
+  .modalActions button:last-child {
+    background: #ccc;
+    color: #333;
+  }
+  .modalActions button:first-child:hover {
+    background: #475a8a;
+  }
+  .modalActions button:last-child:hover {
+    background: #bbb;
+  }
 
-    /* Login screen */
-    #loginScreen {
-      margin: auto;
-      max-width: 380px;
-      width: 100%;
-      background: #273449;
-      border-radius: 12px;
-      padding: 2rem 2.5rem;
-      box-shadow: 0 8px 16px rgb(0 0 0 / 0.7);
-      display: flex;
-      flex-direction: column;
-      gap: 1.25rem;
-      user-select: text;
-    }
-
-    #loginScreen label {
-      font-weight: 600;
-      font-size: 1.1rem;
-      color: #cbd5e1;
-    }
-
-    #loginScreen input[type="text"] {
-      font-size: 1.1rem;
-      padding: 0.6rem 1rem;
-      border-radius: 8px;
-      border: none;
-      background: #0f172a;
-      color: #e0e7ff;
-      outline-offset: 2px;
-      outline-color: #2563eb;
-      transition: background-color 0.25s ease;
-    }
-    #loginScreen input[type="text"]::placeholder {
-      color: #94a3b8;
-    }
-    #loginScreen input[type="text"]:focus {
-      background: #1e293b;
-    }
-
-    #loginScreen button {
-      font-weight: 700;
-      background: #3b82f6;
-      border: none;
-      border-radius: 8px;
-      color: white;
-      padding: 0.7rem;
-      font-size: 1.15rem;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-      user-select: none;
-    }
-    #loginScreen button:hover:not(:disabled) {
-      background: #2563eb;
-    }
-    #loginScreen button:disabled {
-      background: #64748b;
-      cursor: not-allowed;
-    }
-
-    /* Main app UI */
-    #app {
-      display: flex;
-      flex-direction: column;
-      width: 100%;
-      height: 100%;
-      gap: 1rem;
-      overflow: hidden;
-    }
-
-    #topBar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #2563eb;
-      color: white;
-      padding: 0.6rem 1rem;
-      font-weight: 600;
-      font-size: 1.05rem;
-      border-radius: 0 0 12px 12px;
-      user-select: none;
-      flex-shrink: 0;
-    }
-
-    #topBar .status {
-      user-select: text;
-    }
-
-    #caseContainer {
-      flex-grow: 1;
-      display: flex;
-      gap: 1rem;
-      overflow: hidden;
-      padding: 1rem;
-      box-sizing: border-box;
-    }
-
-    #caseList {
-      width: 300px;
-      background: #273449;
-      border-radius: 12px;
-      overflow-y: auto;
-      padding: 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.6rem;
-      user-select: none;
-    }
-
-    .caseItem {
-      background: #334155;
-      padding: 0.7rem 1rem;
-      border-radius: 10px;
-      color: #e0e7ff;
-      font-weight: 700;
-      cursor: pointer;
-      transition: background-color 0.25s ease;
-      border: 2px solid transparent;
-      user-select: none;
-    }
-    .caseItem:hover {
-      background: #2563eb;
-    }
-    .caseItem.selected {
-      background: #60a5fa;
-      border-color: #1e40af;
-    }
-
-    #caseDetail {
-      flex-grow: 1;
-      background: #1e293b;
-      border-radius: 12px;
-      padding: 1.25rem 1.5rem;
-      color: #ddd;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 1.25rem;
-      user-select: text;
-      scroll-behavior: smooth;
-    }
-
-    #caseDetail h2 {
-      margin-top: 0;
-      font-weight: 800;
-      font-size: 1.6rem;
-      color: #e0e7ff;
-      user-select: text;
-    }
-    #caseDetail p {
-      line-height: 1.35;
-      font-size: 1rem;
-      margin-top: 0;
-      user-select: text;
-    }
-
-    /* Suspects & Witnesses */
-    .sectionBlock {
-      background: #273449;
-      border-radius: 12px;
-      padding: 1rem;
-      box-sizing: border-box;
-      max-height: 300px;
-      overflow-y: auto;
-    }
-
-    .sectionBlock h3 {
-      margin-top: 0;
-      margin-bottom: 0.8rem;
-      font-weight: 700;
-      font-size: 1.2rem;
-      color: #e0e7ff;
-      user-select: text;
-    }
-
-    .suspectCard {
-      background: #334155;
-      border-radius: 10px;
-      padding: 0.75rem 1rem;
-      margin-bottom: 0.8rem;
-      display: flex;
-      gap: 1rem;
-      align-items: center;
-      color: #f1f5f9;
-      user-select: text;
-      position: relative;
-    }
-
-    .suspectImg {
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 2px solid #64748b;
-      flex-shrink: 0;
-      background: #0f172a;
-    }
-
-    .suspectInfo {
-      flex-grow: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 0.15rem;
-    }
-
-    .suspectName {
-      font-weight: 700;
-      font-size: 1.15rem;
-      color: #cbd5e1;
-      user-select: text;
-    }
-    .suspectSubText {
-      font-size: 0.85rem;
-      color: #94a3b8;
-      user-select: text;
-    }
-
-    .suspectActions {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-      align-items: center;
-      user-select: none;
-    }
-
-    .btnSmall {
-      font-size: 0.85rem;
-      padding: 0.3rem 0.7rem;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      transition: background-color 0.25s ease;
-      color: white;
-      font-weight: 600;
-      background: #2563eb;
-      white-space: nowrap;
-    }
-    .btnSmall:disabled {
-      background: #64748b;
-      cursor: not-allowed;
-    }
-    .btnSmall:hover:not(:disabled) {
-      background: #1e40af;
-    }
-
-    /* Checkboxes */
-    input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      cursor: pointer;
-    }
-
-    /* Buttons container */
-    #caseActions {
-      display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      padding-top: 0.7rem;
-      user-select: none;
-    }
-
-    #caseActions button {
-      font-weight: 700;
-      background: #3b82f6;
-      border: none;
-      border-radius: 10px;
-      color: white;
-      padding: 0.7rem 1.3rem;
-      font-size: 1.05rem;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-    #caseActions button:disabled {
-      background: #64748b;
-      cursor: not-allowed;
-    }
-    #caseActions button:hover:not(:disabled) {
-      background: #2563eb;
-    }
-
-    /* Logs */
-    .logPanel {
-      background: #0f172a;
-      border: 1px solid #334155;
-      border-radius: 10px;
-      padding: 0.8rem 1rem;
-      max-height: 150px;
-      overflow-y: auto;
-      font-family: monospace;
-      font-size: 0.95rem;
-      color: #cbd5e1;
-      user-select: text;
-    }
-
-    /* Modal backdrop */
-    .modalBackdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.85);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-      user-select: none;
-    }
-    .modalBackdrop.hidden {
-      display: none;
-    }
-
-    /* Modal */
-    .modalContent {
-      background: #1e293b;
-      padding: 2rem 2.5rem;
-      border-radius: 15px;
-      max-width: 600px;
-      max-height: 80vh;
-      overflow-y: auto;
-      color: #ddd;
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      user-select: text;
-      box-shadow: 0 8px 16px rgb(0 0 0 / 0.8);
-    }
-
-    .modalContent h3 {
-      margin-top: 0;
-      font-weight: 800;
-      font-size: 1.7rem;
-      color: #e0e7ff;
-      user-select: text;
-    }
-
-    .modalContent p {
-      font-size: 1rem;
-      user-select: text;
-      line-height: 1.3;
-    }
-
-    .modalLog {
-      background: #0f172a;
-      padding: 1rem;
-      border-radius: 10px;
-      border: 1px solid #334155;
-      font-family: monospace;
-      font-size: 0.9rem;
-      max-height: 250px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-      user-select: text;
-    }
-
-    .modalActions {
-      display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      margin-top: 1rem;
-      user-select: none;
-    }
-
-    .modalActions button {
-      background: #2563eb;
-      border: none;
-      border-radius: 10px;
-      padding: 0.7rem 1.3rem;
-      color: white;
-      font-weight: 700;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-    .modalActions button:hover {
-      background: #1e40af;
-    }
-    .modalActions button:disabled {
-      background: #64748b;
-      cursor: not-allowed;
-    }
-
-    /* Scrollbar style */
-    ::-webkit-scrollbar {
-      width: 10px;
-      height: 10px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #1e293b;
-      border-radius: 10px;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #2563eb;
-      border-radius: 10px;
-    }
-
-    /* Responsive */
-    @media (max-width: 900px) {
-      #caseContainer {
-        flex-direction: column;
-      }
-      #caseList {
-        width: 100%;
-        max-height: 220px;
-        overflow-x: auto;
-        overflow-y: hidden;
-        display: flex;
-        gap: 0.8rem;
-        padding: 0.5rem 1rem;
-      }
-      .caseItem {
-        flex-shrink: 0;
-        min-width: 150px;
-        border-radius: 12px;
-        text-align: center;
-        font-size: 0.9rem;
-      }
-      #caseDetail {
-        max-height: none;
-        overflow-y: auto;
-        padding: 1rem;
-      }
-      #caseActions {
-        justify-content: center;
-      }
-      .suspectCard {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-      .suspectActions {
-        width: 100%;
-        justify-content: flex-start;
-      }
-    }
-
-  </style>
+  /* Scrollbar style for logs */
+  .logSection::-webkit-scrollbar {
+    width: 8px;
+  }
+  .logSection::-webkit-scrollbar-thumb {
+    background: #2e3a59;
+    border-radius: 4px;
+  }
+</style>
 </head>
 <body>
 
-<header>🚓 Detective Case Manager</header>
+<header>🚓 Detective Case Manager - Cases Completed: <span id="casesCompletedCount">0</span> / 100</header>
 
-<!-- Loading screen -->
-<div id="loadingScreen" aria-live="polite" role="alert" >
-  <div id="loadingSpinner" aria-hidden="true"></div>
-  <div>Loading Detective App...</div>
+<div id="loadingScreen">
+  <div id="loadingSpinner"></div>
+  Loading Cases...
 </div>
 
-<!-- Login Screen -->
-<div id="loginScreen" style="display:none;">
-  <label for="officerNameInput">Enter Your Officer Name</label>
-  <input type="text" id="officerNameInput" placeholder="e.g. Officer Johnson" autocomplete="off" />
+<div id="loginScreen" class="hidden" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+  <h2 id="loginTitle">Enter Your Officer Name</h2>
+  <input type="text" id="officerNameInput" placeholder="Officer Name" autocomplete="off" />
   <button id="loginBtn" disabled>Login</button>
 </div>
 
-<!-- Main App -->
-<div id="app" style="display:none;" role="main" aria-label="Detective Case Manager Application">
+<div id="app" class="hidden" role="main" aria-label="Detective Case Manager Application">
+
   <div id="topBar" aria-live="polite" aria-atomic="true">
-    Officer: <span id="officerNameDisplay"></span> | Cases Completed: <span id="casesCompletedCount">0</span>
+    Welcome, <span id="officerNameDisplay"></span>!
   </div>
 
   <div id="caseContainer">
-    <div id="caseList" role="list" aria-label="List of active cases">
-      <!-- Case items inserted here -->
-    </div>
+    <nav id="caseList" aria-label="List of cases" tabindex="0">
+      <!-- Cases will be listed here -->
+    </nav>
 
-    <div id="caseDetail" tabindex="0" aria-live="polite" aria-atomic="true">
-      <!-- Details of selected case -->
-      <em>Select a case to view details.</em>
-    </div>
+    <section id="caseDetail" tabindex="0" aria-live="polite" aria-atomic="true">
+      <!-- Case details will show here -->
+      <p>Select a case from the left to view details.</p>
+    </section>
   </div>
 
-  <div id="caseActions">
-    <button id="btnCompleteCase" disabled>Complete Case</button>
+  <div id="caseActions" style="display:none;">
+    <button id="btnCompleteCase">Complete Case</button>
   </div>
 </div>
 
-<!-- Modal container -->
+<!-- Modal -->
 <div id="modal" class="modalBackdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalDesc">
   <div class="modalContent">
-    <h3 id="modalTitle">Modal Title</h3>
-    <div id="modalDesc" style="margin-top: 0.5rem;">Modal content here.</div>
-    <div class="modalActions" id="modalActions"></div>
+    <h3 id="modalTitle"></h3>
+    <div id="modalDesc"></div>
+    <div class="modalActions"></div>
   </div>
 </div>
 
 <script>
 (() => {
-  'use strict';
-
-  // State variables
-  let officerName = null;
+  const TOTAL_CASES = 100;
+  let officerName = '';
   let casesCompleted = 0;
-
-  // Cases data (example)
-  const cases = [
-    {
-      id: 1,
-      name: "Robbery at Downtown Bank",
-      description: "Suspects robbed the main bank downtown, escaping with cash and valuables.",
-      suspects: [
-        { id: 101, name: "Jake Matthews", age: 32, img: "https://randomuser.me/api/portraits/men/21.jpg", wanted: true, arrested: false, warrant: null, findings: null, detained: false },
-        { id: 102, name: "Linda Park", age: 28, img: "https://randomuser.me/api/portraits/women/44.jpg", wanted: false, arrested: false, warrant: null, findings: null, detained: false },
-      ],
-      witnesses: [
-        { id: 201, name: "Mark Stevens", age: 40, img: "https://randomuser.me/api/portraits/men/35.jpg", statement: "Saw two suspects running from the bank wearing masks." }
-      ],
-      status: "active",
-      logs: [],
-    },
-    {
-      id: 2,
-      name: "Vandalism at Central Park",
-      description: "Graffiti and destruction of public property during the night.",
-      suspects: [
-        { id: 103, name: "Alex Kim", age: 22, img: "https://randomuser.me/api/portraits/men/78.jpg", wanted: false, arrested: false, warrant: null, findings: null, detained: false },
-      ],
-      witnesses: [
-        { id: 202, name: "Sarah Collins", age: 25, img: "https://randomuser.me/api/portraits/women/50.jpg", statement: "Heard noises around midnight and saw a suspicious figure." }
-      ],
-      status: "active",
-      logs: [],
-    },
-    {
-      id: 3,
-      name: "Missing Person: John Doe",
-      description: "Investigation into the disappearance of John Doe, last seen near the river.",
-      suspects: [
-        { id: 104, name: "Martha Green", age: 55, img: "https://randomuser.me/api/portraits/women/65.jpg", wanted: false, arrested: false, warrant: null, findings: null, detained: false },
-      ],
-      witnesses: [],
-      status: "active",
-      logs: [],
-    },
-  ];
+  let cases = [];
+  let selectedCaseId = null;
 
   // DOM references
   const loadingScreen = document.getElementById('loadingScreen');
   const loginScreen = document.getElementById('loginScreen');
+  const app = document.getElementById('app');
+  const casesCompletedCount = document.getElementById('casesCompletedCount');
   const officerNameInput = document.getElementById('officerNameInput');
   const loginBtn = document.getElementById('loginBtn');
-  const app = document.getElementById('app');
   const officerNameDisplay = document.getElementById('officerNameDisplay');
-  const casesCompletedCount = document.getElementById('casesCompletedCount');
-  const caseList = document.getElementById('caseList');
-  const caseDetail = document.getElementById('caseDetail');
+  const caseListEl = document.getElementById('caseList');
+  const caseDetailEl = document.getElementById('caseDetail');
   const btnCompleteCase = document.getElementById('btnCompleteCase');
+  const caseActions = document.getElementById('caseActions');
   const modal = document.getElementById('modal');
   const modalTitle = document.getElementById('modalTitle');
   const modalDesc = document.getElementById('modalDesc');
-  const modalActions = document.getElementById('modalActions');
+  const modalActions = document.querySelector('.modalActions');
 
-  // Current selected case id
-  let selectedCaseId = null;
-
-  // -----------------------
-  // Utility functions
-  // -----------------------
-  function saveOfficerName(name) {
-    try {
-      localStorage.setItem('officerName', name);
-    } catch(e) {
-      // ignore
-    }
+  // Util random helpers
+  function randomFromArray(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+  function randomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+  function randomDateInPast(daysBack=30) {
+    const now = Date.now();
+    const past = now - daysBack*24*60*60*1000;
+    const ts = randomInt(past, now);
+    return new Date(ts);
+  }
+  function formatDateTime(date) {
+    return date.toLocaleString(undefined, {hour12:true});
   }
 
-  function loadOfficerName() {
-    try {
-      return localStorage.getItem('officerName');
-    } catch(e) {
-      return null;
-    }
-  }
+  // Sample data pools
+  const suspectFirstNames = ['John', 'Jane', 'Alex', 'Maria', 'Mike', 'Lucy', 'Tom', 'Emma', 'Chris', 'Olivia'];
+  const suspectLastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Davis', 'Miller'];
+  const witnessFirstNames = ['Paul', 'Sophia', 'Liam', 'Isabella', 'Noah', 'Mia', 'Ethan', 'Amelia'];
+  const witnessLastNames = ['Wilson', 'Moore', 'Taylor', 'Anderson', 'Thomas', 'Jackson', 'White'];
+  const weapons = ['9mm Pistol', 'Knife', 'Baseball Bat', 'Shotgun', 'Rifle', 'Taser'];
+  const radioPhrases = [
+    'Suspect spotted near downtown.',
+    'Backup requested at 5th Avenue.',
+    'All units stand by.',
+    'Code 3 - urgent response needed.',
+    'Suspect is armed and dangerous.',
+    'Searching area for evidence.'
+  ];
+  const callLogsSamples = [
+    '911 call reporting a disturbance.',
+    'Anonymous tip about suspicious activity.',
+    'Victim reporting theft of property.',
+    'Neighbor reports loud noises.',
+    'Caller describes a fleeing vehicle.',
+    'Caller requests assistance at residence.'
+  ];
+  const caseNames = [
+    'Burglary at Elm Street',
+    'Robbery in Downtown',
+    'Assault in Central Park',
+    'Vandalism near Riverside',
+    'Hit and Run on Main St',
+    'Missing Person Report',
+    'Arson at Warehouse',
+    'Fraud Investigation',
+    'Drug Trafficking Bust',
+    'Homicide Case #108'
+  ];
 
-  // Show loading, then show login or app
-  function hideLoadingAndShowNext() {
-    loadingScreen.classList.add('hidden');
-    setTimeout(() => {
-      loadingScreen.style.display = 'none';
-      if (officerName) {
-        showApp();
-      } else {
-        showLogin();
+  // Generate a suspect
+  function generateSuspect(id) {
+    const firstName = randomFromArray(suspectFirstNames);
+    const lastName = randomFromArray(suspectLastNames);
+    const name = `${firstName} ${lastName}`;
+    const wanted = Math.random() < 0.3;
+    const arrested = false;
+    const detained = false;
+    const warrantRequested = false;
+    const findingsRequested = false;
+    const age = randomInt(20, 50);
+    const imageUrl = `https://i.pravatar.cc/150?img=${randomInt(1, 70)}`;
+    return {
+      id,
+      name,
+      age,
+      wanted,
+      arrested,
+      detained,
+      warrantRequested,
+      findingsRequested,
+      imageUrl,
+    };
+  }
+  // Generate a witness/interview
+  function generateWitness(id) {
+    const firstName = randomFromArray(witnessFirstNames);
+    const lastName = randomFromArray(witnessLastNames);
+    const name = `${firstName} ${lastName}`;
+    const age = randomInt(18, 60);
+    const statementSamples = [
+      'I saw the suspect near the crime scene.',
+      'He looked nervous and was pacing around.',
+      'I heard loud noises around midnight.',
+      'The suspect fled towards the east side.',
+      'There was a red car speeding away.',
+      'I spoke to the victim after the incident.'
+    ];
+    const statement = randomFromArray(statementSamples);
+    const imageUrl = `https://i.pravatar.cc/150?img=${randomInt(71, 99)}`;
+    return { id, name, age, statement, imageUrl };
+  }
+  // Generate logs (weapon, call, radio, general)
+  function generateLogs(type, count) {
+    const logs = [];
+    for(let i=0; i<count; i++) {
+      const date = randomDateInPast(15);
+      let text = '';
+      switch(type) {
+        case 'weapon':
+          text = `Found weapon: ${randomFromArray(weapons)}`;
+          break;
+        case 'call':
+          text = randomFromArray(callLogsSamples);
+          break;
+        case 'radio':
+          text = randomFromArray(radioPhrases);
+          break;
+        case 'general':
+          text = `Note added by officer at ${formatDateTime(date)}`;
+          break;
       }
-    }, 500);
+      logs.push({timestamp: date, text});
+    }
+    // Sort logs by timestamp ascending
+    logs.sort((a,b) => a.timestamp - b.timestamp);
+    return logs;
+  }
+  // Generate one case
+  function generateCase(id) {
+    const name = randomFromArray(caseNames) + ` #${id}`;
+    const suspectsCount = randomInt(2,5);
+    const witnessesCount = randomInt(1,3);
+    return {
+      id,
+      name,
+      status: 'open', // or 'completed'
+      suspects: Array.from({length: suspectsCount}, (_,i) => generateSuspect(i+1)),
+      witnesses: Array.from({length: witnessesCount}, (_,i) => generateWitness(i+1)),
+      logs: {
+        weapon: generateLogs('weapon', randomInt(1,4)),
+        call: generateLogs('call', randomInt(1,4)),
+        radio: generateLogs('radio', randomInt(1,4)),
+        general: generateLogs('general', randomInt(1,3)),
+      }
+    };
   }
 
-  // Show login screen
-  function showLogin() {
-    loginScreen.style.display = 'flex';
-    app.style.display = 'none';
-    officerNameInput.focus();
+  // Save/load officer name locally
+  function saveOfficerName(name) {
+    try { localStorage.setItem('detectiveOfficerName', name); } catch {}
+  }
+  function loadOfficerName() {
+    try { return localStorage.getItem('detectiveOfficerName') || ''; } catch { return ''; }
   }
 
-  // Show main app UI
-  function showApp() {
-    loginScreen.style.display = 'none';
-    app.style.display = 'flex';
-    officerNameDisplay.textContent = officerName;
-    casesCompletedCount.textContent = casesCompleted;
-    renderCaseList();
+  // Save/load completed cases count
+  function saveCompletedCount(count) {
+    try { localStorage.setItem('detectiveCasesCompleted', count); } catch {}
+  }
+  function loadCompletedCount() {
+    try { return parseInt(localStorage.getItem('detectiveCasesCompleted')) || 0; } catch { return 0; }
   }
 
-  // Render list of cases
+  // Save/load cases completed flags (which cases completed)
+  function saveCasesStatus() {
+    try {
+      const statusData = cases.reduce((acc,c) => {
+        acc[c.id] = c.status;
+        return acc;
+      }, {});
+      localStorage.setItem('detectiveCasesStatus', JSON.stringify(statusData));
+    } catch {}
+  }
+  function loadCasesStatus() {
+    try {
+      const statusData = JSON.parse(localStorage.getItem('detectiveCasesStatus') || '{}');
+      return statusData;
+    } catch { return {}; }
+  }
+
+  // Render cases list
   function renderCaseList() {
-    caseList.innerHTML = '';
+    caseListEl.innerHTML = '';
     cases.forEach(c => {
-      if (c.status !== 'active') return; // Only active cases
       const div = document.createElement('div');
-      div.className = 'caseItem' + (c.id === selectedCaseId ? ' selected' : '');
-      div.textContent = c.name;
-      div.setAttribute('role', 'listitem');
       div.tabIndex = 0;
+      div.className = 'caseItem' + (c.id === selectedCaseId ? ' selected' : '');
+      div.textContent = `${c.name} [${c.status}]`;
+      if (c.status === 'completed') {
+        div.style.opacity = 0.6;
+      }
       div.addEventListener('click', () => {
-        selectCase(c.id);
+        selectedCaseId = c.id;
+        renderCaseList();
+        renderCaseDetails();
       });
-      div.addEventListener('keydown', (ev) => {
-        if (ev.key === 'Enter' || ev.key === ' ') {
-          ev.preventDefault();
-          selectCase(c.id);
+      div.addEventListener('keydown', e => {
+        if(e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          selectedCaseId = c.id;
+          renderCaseList();
+          renderCaseDetails();
         }
       });
-      caseList.appendChild(div);
+      caseListEl.appendChild(div);
     });
-    if (selectedCaseId === null) {
-      // Select first active case automatically
-      const firstActive = cases.find(c => c.status === 'active');
-      if (firstActive) selectCase(firstActive.id);
+  }
+  // Format log entries for display
+  function renderLogsSection(title, logs) {
+    if (!logs || logs.length === 0) return null;
+    const section = document.createElement('div');
+    section.className = 'logSection';
+    const heading = document.createElement('h3');
+    heading.textContent = title;
+    section.appendChild(heading);
+    logs.forEach(log => {
+      const entry = document.createElement('div');
+      entry.className = 'logEntry';
+      entry.textContent = `[${formatDateTime(log.timestamp)}] ${log.text}`;
+      section.appendChild(entry);
+    });
+    return section;
+  }
+  // Render suspect card with actions
+  function renderSuspectCard(suspect, caseObj) {
+    const card = document.createElement('div');
+    card.className = 'suspectCard';
+
+    const img = document.createElement('img');
+    img.className = 'suspectImg';
+    img.src = suspect.imageUrl;
+    img.alt = `Photo of ${suspect.name}`;
+    card.appendChild(img);
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'suspectName';
+    nameEl.textContent = suspect.name;
+    card.appendChild(nameEl);
+
+    const ageEl = document.createElement('div');
+    ageEl.className = 'suspectSubText';
+    ageEl.textContent = `Age: ${suspect.age}`;
+    card.appendChild(ageEl);
+
+    const wantedEl = document.createElement('div');
+    wantedEl.className = 'suspectSubText';
+    wantedEl.textContent = `Wanted: ${suspect.wanted ? 'Yes' : 'No'}`;
+    card.appendChild(wantedEl);
+
+    const arrestedEl = document.createElement('div');
+    arrestedEl.className = 'suspectSubText';
+    arrestedEl.textContent = `Arrested: ${suspect.arrested ? 'Yes' : 'No'}`;
+    card.appendChild(arrestedEl);
+
+    const detainedEl = document.createElement('div');
+    detainedEl.className = 'suspectSubText';
+    detainedEl.textContent = `Detained: ${suspect.detained ? 'Yes' : 'No'}`;
+    card.appendChild(detainedEl);
+
+    const actions = document.createElement('div');
+    actions.className = 'suspectActions';
+
+    // Warrant button
+    const btnWarrant = document.createElement('button');
+    btnWarrant.className = 'btnSmall';
+    btnWarrant.textContent = suspect.warrantRequested ? 'Warrant Requested' : 'Request Warrant';
+    btnWarrant.disabled = suspect.warrantRequested;
+    btnWarrant.title = btnWarrant.textContent;
+    btnWarrant.addEventListener('click', () => {
+      suspect.warrantRequested = true;
+      addLog(caseObj, `${officerName} requested a warrant for ${suspect.name}.`);
+      renderCaseDetails();
+    });
+    actions.appendChild(btnWarrant);
+
+    // Findings button
+    const btnFindings = document.createElement('button');
+    btnFindings.className = 'btnSmall';
+    btnFindings.textContent = suspect.findingsRequested ? 'Findings Requested' : 'Request Findings';
+    btnFindings.disabled = suspect.findingsRequested;
+    btnFindings.title = btnFindings.textContent;
+    btnFindings.addEventListener('click', () => {
+      suspect.findingsRequested = true;
+      addLog(caseObj, `${officerName} requested findings on ${suspect.name}.`);
+      renderCaseDetails();
+    });
+    actions.appendChild(btnFindings);
+
+    // Arrest button (only if wanted & not arrested)
+    const btnArrest = document.createElement('button');
+    btnArrest.className = 'btnSmall';
+    btnArrest.textContent = 'Arrest';
+    btnArrest.disabled = !(suspect.wanted && !suspect.arrested);
+    btnArrest.title = btnArrest.disabled ? 'Can only arrest wanted & not already arrested suspect' : 'Arrest suspect';
+    btnArrest.addEventListener('click', () => {
+      if (suspect.wanted && !suspect.arrested) {
+        suspect.arrested = true;
+        addLog(caseObj, `${officerName} arrested suspect ${suspect.name}.`);
+        alert(`${suspect.name} has been arrested.`);
+        renderCaseDetails();
+      }
+    });
+    actions.appendChild(btnArrest);
+
+    // Detain button (only if not detained)
+    const btnDetain = document.createElement('button');
+    btnDetain.className = 'btnSmall';
+    btnDetain.textContent = 'Detain';
+    btnDetain.disabled = suspect.detained;
+    btnDetain.title = suspect.detained ? 'Already detained' : 'Send unit to detain suspect';
+    btnDetain.addEventListener('click', () => {
+      if (!suspect.detained) {
+        suspect.detained = true;
+        addLog(caseObj, `${officerName} sent unit to detain ${suspect.name}.`);
+        alert(`Unit sent to detain ${suspect.name}.`);
+        renderCaseDetails();
+      }
+    });
+    actions.appendChild(btnDetain);
+
+    card.appendChild(actions);
+    return card;
+  }
+
+  // Render witnesses/interviews
+  function renderWitnesses(witnesses) {
+    if (!witnesses || witnesses.length === 0) return null;
+    const container = document.createElement('div');
+    container.className = 'witnessesContainer';
+
+    const heading = document.createElement('h3');
+    heading.textContent = 'Witnesses / Interviews';
+    container.appendChild(heading);
+
+    witnesses.forEach(w => {
+      const card = document.createElement('div');
+      card.className = 'witnessCard';
+
+      const img = document.createElement('img');
+      img.className = 'witnessImg';
+      img.src = w.imageUrl;
+      img.alt = `Photo of ${w.name}`;
+      card.appendChild(img);
+
+      const nameEl = document.createElement('div');
+      nameEl.className = 'witnessName';
+      nameEl.textContent = w.name;
+      card.appendChild(nameEl);
+
+      const ageEl = document.createElement('div');
+      ageEl.className = 'witnessSubText';
+      ageEl.textContent = `Age: ${w.age}`;
+      card.appendChild(ageEl);
+
+      const statementEl = document.createElement('div');
+      statementEl.className = 'witnessStatement';
+      statementEl.textContent = `"${w.statement}"`;
+      card.appendChild(statementEl);
+
+      container.appendChild(card);
+    });
+    return container;
+  }
+
+  // Add log entry to general logs
+  function addLog(caseObj, text) {
+    const now = new Date();
+    caseObj.logs.general.push({timestamp: now, text});
+    caseObj.logs.general.sort((a,b) => a.timestamp - b.timestamp);
+  }
+
+  // Render case details
+  function renderCaseDetails() {
+    const c = cases.find(cs => cs.id === selectedCaseId);
+    if (!c) {
+      caseDetailEl.innerHTML = '<p>Select a case from the left to view details.</p>';
+      caseActions.style.display = 'none';
+      return;
+    }
+    caseDetailEl.innerHTML = '';
+
+    // Case header
+    const header = document.createElement('h2');
+    header.textContent = `${c.name} [${c.status.toUpperCase()}]`;
+    caseDetailEl.appendChild(header);
+
+    // Suspects container (clear scroll)
+    const suspectsContainer = document.createElement('div');
+    suspectsContainer.style.display = 'flex';
+    suspectsContainer.style.flexWrap = 'wrap';
+    suspectsContainer.style.justifyContent = 'flex-start';
+    suspectsContainer.style.gap = '1rem';
+    suspectsContainer.style.marginBottom = '1rem';
+    suspectsContainer.setAttribute('aria-label', 'Suspects');
+    suspectsContainer.id = 'suspectsContainer';
+
+    c.suspects.forEach(suspect => {
+      suspectsContainer.appendChild(renderSuspectCard(suspect, c));
+    });
+    caseDetailEl.appendChild(suspectsContainer);
+
+    // Witnesses/interviews
+    const witnessesSection = renderWitnesses(c.witnesses);
+    if (witnessesSection) caseDetailEl.appendChild(witnessesSection);
+
+    // Logs
+    ['weapon', 'call', 'radio', 'general'].forEach(type => {
+      const section = renderLogsSection(type.charAt(0).toUpperCase() + type.slice(1) + ' Logs', c.logs[type]);
+      if (section) caseDetailEl.appendChild(section);
+    });
+
+    // Show complete case button if not completed
+    if (c.status !== 'completed') {
+      caseActions.style.display = 'block';
+      btnCompleteCase.disabled = false;
+    } else {
+      caseActions.style.display = 'none';
     }
   }
 
-  // Select a case by id
-  function selectCase(id) {
-    if (selectedCaseId === id) return;
-    selectedCaseId = id;
+  // Complete current case
+  btnCompleteCase.addEventListener('click', () => {
+    if (!selectedCaseId) return;
+    const c = cases.find(cs => cs.id === selectedCaseId);
+    if (!c || c.status === 'completed') return;
+    c.status = 'completed';
+    casesCompleted++;
+    saveCompletedCount(casesCompleted);
+    saveCasesStatus();
+    updateCasesCompletedDisplay();
+    alert(`Case "${c.name}" marked as completed.`);
+    renderCaseList();
+    renderCaseDetails();
+    selectRandomOpenCase();
+  });
+
+  // Update cases completed count display
+  function updateCasesCompletedDisplay() {
+    casesCompletedCount.textContent = casesCompleted;
+  }
+
+  // Select a random open case (for starting)
+  function selectRandomOpenCase() {
+    const openCases = cases.filter(c => c.status !== 'completed');
+    if (openCases.length === 0) {
+      selectedCaseId = null;
+      caseDetailEl.innerHTML = '<p>All cases completed! Great job, detective.</p>';
+      caseActions.style.display = 'none';
+      return;
+    }
+    const randomCase = randomFromArray(openCases);
+    selectedCaseId = randomCase.id;
     renderCaseList();
     renderCaseDetails();
   }
 
-  // Render details for selected case
-  function renderCaseDetails() {
-    const c = cases.find(c => c.id === selectedCaseId);
-    if (!c) {
-      caseDetail.innerHTML = '<em>No case selected.</em>';
-      btnCompleteCase.disabled = true;
-      return;
-    }
-
-    btnCompleteCase.disabled = false;
-
-    // Build HTML
-    let html = `<h2>${escapeHtml(c.name)}</h2>`;
-    html += `<p>${escapeHtml(c.description)}</p>`;
-
-    // Suspects section
-    html += `<div class="sectionBlock"><h3>Suspects</h3>`;
-    if (c.suspects.length === 0) {
-      html += `<p><em>No suspects yet.</em></p>`;
-    } else {
-      c.suspects.forEach(s => {
-        html += suspectCardHtml(s, c);
-      });
-    }
-    html += `</div>`;
-
-    // Witnesses section
-    html += `<div class="sectionBlock"><h3>Witnesses</h3>`;
-    if (c.witnesses.length === 0) {
-      html += `<p><em>No witnesses yet.</em></p>`;
-    } else {
-      c.witnesses.forEach(w => {
-        html += witnessCardHtml(w);
-      });
-    }
-    html += `</div>`;
-
-    // Logs
-    html += `<div class="sectionBlock" aria-label="Case Logs"><h3>Case Logs</h3>`;
-    if (c.logs.length === 0) {
-      html += `<p><em>No logs yet.</em></p>`;
-    } else {
-      html += `<div class="logPanel">${escapeHtml(c.logs.join('\n'))}</div>`;
-    }
-    html += `</div>`;
-
-    caseDetail.innerHTML = html;
-
-    // Attach event handlers for buttons in suspects
-    c.suspects.forEach(s => {
-      attachSuspectButtons(s, c);
-    });
-  }
-
-  // Escape HTML
-  function escapeHtml(text) {
-    if (!text) return '';
-    return text.replace(/&/g, "&amp;")
-               .replace(/</g, "&lt;")
-               .replace(/>/g, "&gt;")
-               .replace(/"/g, "&quot;")
-               .replace(/'/g, "&#039;");
-  }
-
-  // Generate suspect card HTML
-  function suspectCardHtml(s, c) {
-    let actions = [];
-
-    // Warrant status and buttons
-    let warrantText = "No warrant requested";
-    if (s.warrant) {
-      if (s.warrant.status === 'approved') {
-        warrantText = `Warrant APPROVED`;
-      } else if (s.warrant.status === 'denied') {
-        warrantText = `Warrant DENIED`;
-      } else if (s.warrant.status === 'pending') {
-        warrantText = `Warrant PENDING`;
-      }
-    }
-
-    // Button labels per warrant status
-    if (!s.warrant) {
-      actions.push(`<button class="btnSmall btnRequestWarrant" data-suspect-id="${s.id}">Request Warrant</button>`);
-    } else if (s.warrant.status === 'pending') {
-      actions.push(`<span title="Waiting for warrant decision" style="font-style: italic; color: #94a3b8;">Warrant Pending</span>`);
-    } else if (s.warrant.status === 'denied') {
-      actions.push(`<button class="btnSmall btnRequestCourtCase" data-suspect-id="${s.id}">Request Court Case</button>`);
-    } else if (s.warrant.status === 'approved') {
-      actions.push(`<button class="btnSmall btnViewWarrant" data-suspect-id="${s.id}">View Search Warrant</button>`);
-      // Can request findings after warrant approved
-      if (!s.findings) {
-        actions.push(`<button class="btnSmall btnRequestFindings" data-suspect-id="${s.id}">Request Findings</button>`);
-      } else {
-        actions.push(`<span style="font-style: italic; color: #94a3b8;">Findings Submitted</span>`);
-      }
-    }
-
-    // Arrest button (if wanted and no arrest yet)
-    if (s.wanted && !s.arrested) {
-      actions.push(`<button class="btnSmall btnArrestSuspect" data-suspect-id="${s.id}">Arrest</button>`);
-    }
-
-    // Detain unit button
-    if (!s.detained) {
-      actions.push(`<button class="btnSmall btnDetainSuspect" data-suspect-id="${s.id}">Send Unit to Detain</button>`);
-    } else {
-      actions.push(`<span style="font-style: italic; color: #94a3b8;">Suspect Detained</span>`);
-    }
-
-    // Build card
-    return `
-      <div class="suspectCard" id="suspect-${s.id}">
-        <img src="${escapeHtml(s.img)}" alt="Photo of ${escapeHtml(s.name)}" class="suspectImg" loading="lazy" />
-        <div class="suspectInfo">
-          <div class="suspectName">${escapeHtml(s.name)}</div>
-          <div class="suspectSubText">Age: ${s.age} | Wanted: ${s.wanted ? 'Yes' : 'No'} | Arrested: ${s.arrested ? 'Yes' : 'No'}</div>
-          <div class="suspectSubText">Warrant: ${warrantText}</div>
-          <div class="suspectSubText">Detained: ${s.detained ? 'Yes' : 'No'}</div>
-        </div>
-        <div class="suspectActions">${actions.join(' ')}</div>
-      </div>
-    `;
-  }
-
-  // Generate witness card HTML
-  function witnessCardHtml(w) {
-    return `
-      <div class="suspectCard" id="witness-${w.id}">
-        <img src="https://randomuser.me/api/portraits/lego/1.jpg" alt="Photo of ${escapeHtml(w.name)}" class="suspectImg" loading="lazy" />
-        <div class="suspectInfo">
-          <div class="suspectName">${escapeHtml(w.name)}</div>
-          <div class="suspectSubText">Age: ${w.age}</div>
-          <div class="suspectSubText"><strong>Statement:</strong> ${escapeHtml(w.statement)}</div>
-        </div>
-      </div>
-    `;
-  }
-
-  // Attach event listeners to suspect buttons
-  function attachSuspectButtons(s, c) {
-    // Request warrant
-    const btnWarrant = document.querySelector(`#suspect-${s.id} .btnRequestWarrant`);
-    if (btnWarrant) {
-      btnWarrant.addEventListener('click', () => {
-        // Immediately approve or deny
-        const approved = Math.random() < 0.5;
-        s.warrant = {
-          status: approved ? 'approved' : 'denied',
-          date: new Date().toISOString(),
-          courtCaseRequested: false,
-        };
-        addLog(c, `${officerName} requested a search warrant for ${s.name}. Result: ${approved ? 'APPROVED' : 'DENIED'}.`);
-        renderCaseDetails();
-      });
-    }
-
-    // Request court case (only if warrant denied)
-    const btnCourt = document.querySelector(`#suspect-${s.id} .btnRequestCourtCase`);
-    if (btnCourt) {
-      btnCourt.addEventListener('click', () => {
-        if (s.warrant && s.warrant.status === 'denied' && !s.warrant.courtCaseRequested) {
-          s.warrant.courtCaseRequested = true;
-          addLog(c, `${officerName} requested a court case for ${s.name} after warrant denial.`);
-          alert(`Court case requested for ${s.name}. Await further instructions.`);
-          renderCaseDetails();
-        }
-      });
-    }
-
-    // View search warrant (if approved)
-    const btnView = document.querySelector(`#suspect-${s.id} .btnViewWarrant`);
-    if (btnView) {
-      btnView.addEventListener('click', () => {
-        showModal(
-          `Search Warrant for ${s.name}`,
-          `<p>The search warrant for <strong>${escapeHtml(s.name)}</strong> was approved on ${new Date(s.warrant.date).toLocaleString()}.</p>`,
-          [{ text: 'Close', onClick: closeModal }]
-        );
-      });
-    }
-
-    // Request findings (only if warrant approved and no findings yet)
-    const btnFindings = document.querySelector(`#suspect-${s.id} .btnRequestFindings`);
-    if (btnFindings) {
-      btnFindings.addEventListener('click', () => {
-        // Simple prompt for findings text
-        const findings = prompt(`Enter findings for ${s.name}:`);
-        if (findings && findings.trim().length > 0) {
-          s.findings = findings.trim();
-          addLog(c, `${officerName} submitted findings for ${s.name}: "${s.findings}"`);
-          renderCaseDetails();
-        }
-      });
-    }
-
-    // Arrest suspect (only if wanted and not arrested)
-    const btnArrest = document.querySelector(`#suspect-${s.id} .btnArrestSuspect`);
-    if (btnArrest) {
-      btnArrest.addEventListener('click', () => {
-        if (s.wanted && !s.arrested) {
-          s.arrested = true;
-          addLog(c, `${officerName} arrested suspect ${s.name}.`);
-          alert(`${s.name} has been arrested.`);
-          renderCaseDetails();
-        }
-      });
-    }
-
-    // Send unit to detain suspect (if not detained)
-    const btnDetain = document.querySelector(`#suspect-${s.id} .btnDetainSuspect`);
-    if (btnDetain) {
-      btnDetain.addEventListener('click', () => {
-        if (!s.detained) {
-          s.detained = true;
-          addLog(c, `${officerName} sent a unit to detain ${s.name}.`);
-          alert(`Unit sent to detain ${s.name}.`);
-          renderCaseDetails();
-        }
-      });
-    }
-  }
-
-  // Add a log entry to case
-  function addLog(c, text) {
-    const timestamp = new Date().toLocaleString();
-    c.logs.push(`[${timestamp}] ${text}`);
-  }
-
-  // Complete the current case
-  btnCompleteCase.addEventListener('click', () => {
-    const c = cases.find(c => c.id === selectedCaseId);
-    if (!c) return;
-
-    showModal(
-      `Complete Case: ${c.name}`,
-      `<p>Are you sure you want to mark this case as completed?</p>`,
-      [
-        {
-          text: 'Yes, Complete',
-          onClick: () => {
-            c.status = 'completed';
-            casesCompleted++;
-            casesCompletedCount.textContent = casesCompleted;
-            addLog(c, `${officerName} marked the case as completed.`);
-            selectedCaseId = null;
-            renderCaseList();
-            renderCaseDetails();
-            closeModal();
-          }
-        },
-        { text: 'Cancel', onClick: closeModal }
-      ]
-    );
-  });
-
-  // Modal control functions
-  function showModal(title, descHtml, actions) {
-    modalTitle.textContent = title;
-    modalDesc.innerHTML = descHtml;
-    modalActions.innerHTML = '';
-    actions.forEach(act => {
-      const btn = document.createElement('button');
-      btn.textContent = act.text;
-      btn.addEventListener('click', act.onClick);
-      modalActions.appendChild(btn);
-    });
-    modal.classList.remove('hidden');
-    modal.focus();
-  }
-
-  function closeModal() {
-    modal.classList.add('hidden');
-  }
-
-  // Login button enablement
+  // Login flow
   officerNameInput.addEventListener('input', () => {
     loginBtn.disabled = officerNameInput.value.trim().length === 0;
   });
-
-  // Login button click
   loginBtn.addEventListener('click', () => {
     officerName = officerNameInput.value.trim();
-    if (officerName.length > 0) {
-      saveOfficerName(officerName);
-      showApp();
-    }
+    if (!officerName) return;
+    saveOfficerName(officerName);
+    loginScreen.classList.add('hidden');
+    app.classList.remove('hidden');
+    officerNameDisplay.textContent = officerName;
+    casesCompleted = loadCompletedCount();
+    updateCasesCompletedDisplay();
+    renderCaseList();
+    selectRandomOpenCase();
   });
 
-  // Initialize
-  function init() {
-    officerName = loadOfficerName();
-    hideLoadingAndShowNext();
+  // Initialize app - load or generate cases
+  function initializeApp() {
+    loadingScreen.classList.remove('hidden');
+    setTimeout(() => {
+      const savedStatus = loadCasesStatus();
+      // generate or load cases
+      for(let i=1; i<=TOTAL_CASES; i++) {
+        const c = generateCase(i);
+        if(savedStatus[i] === 'completed') {
+          c.status = 'completed';
+        }
+        cases.push(c);
+      }
+      loadingScreen.classList.add('hidden');
+
+      // check if officer name stored
+      const storedName = loadOfficerName();
+      if(storedName) {
+        officerNameInput.value = storedName;
+        loginBtn.disabled = false;
+      }
+      loginScreen.classList.remove('hidden');
+    }, 500);
   }
 
-  init();
+  // Modal utility functions
+  function showModal(title, description, actions = []) {
+    modalTitle.textContent = title;
+    modalDesc.textContent = description;
+    modalActions.innerHTML = '';
+    actions.forEach(({text, onClick, disabled}) => {
+      const btn = document.createElement('button');
+      btn.textContent = text;
+      if (disabled) btn.disabled = true;
+      btn.addEventListener('click', () => {
+        onClick();
+        hideModal();
+      });
+      modalActions.appendChild(btn);
+    });
+    modal.classList.remove('hidden');
+  }
+  function hideModal() {
+    modal.classList.add('hidden');
+  }
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) hideModal();
+  });
+  document.addEventListener('keydown', e => {
+    if(e.key === 'Escape') hideModal();
+  });
 
+  // Start
+  initializeApp();
 })();
 </script>
-
 </body>
 </html>
