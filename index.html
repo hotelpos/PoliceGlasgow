@@ -21,9 +21,12 @@
 <body class="p-6">
   <div id="introModal" class="modal-bg">
     <div class="bg-gray-800 p-6 rounded shadow-lg w-full max-w-md">
-      <h2 class="text-2xl font-bold mb-4">Enter Officer Name</h2>
-      <input id="officerName" class="w-full p-2 text-black mb-4" placeholder="e.g., PC Jamie Fraser">
-      <button onclick="startGame()" class="bg-blue-600 px-4 py-2 rounded">Start Case</button>
+      <h2 class="text-2xl font-bold mb-4">Welcome Back, Officer</h2>
+      <input id="officerName" class="w-full p-2 text-black mb-4" placeholder="Enter your name">
+      <div class="flex justify-between">
+        <button onclick="eraseHistory()" class="bg-red-600 px-4 py-2 rounded">Erase History</button>
+        <button onclick="startGame()" class="bg-blue-600 px-4 py-2 rounded">Play</button>
+      </div>
     </div>
   </div>
 
@@ -39,6 +42,10 @@
         <ul id="evidenceList" class="list-disc list-inside text-sm"></ul>
       </div>
       <div class="bg-gray-800 p-4 rounded">
+        <h2 class="text-xl font-semibold mb-2">📻 Radio Log</h2>
+        <div id="radioLog" class="text-sm font-mono"></div>
+      </div>
+      <div class="bg-gray-800 p-4 rounded">
         <h2 class="text-xl font-semibold mb-2">👥 Witness Statements</h2>
         <div id="witnessStatements" class="text-sm"></div>
       </div>
@@ -50,27 +57,35 @@
   </div>
 
   <script>
-    const cases = [
+    const caseTemplates = [
       {
-        id: '2025-0718-G01',
-        officer: '',
-        badge: 'C3421',
-        summary: 'Reported break-in at a convenience store on Argyle Street. Officer responded to triggered alarm.',
-        evidence: ['CCTV footage from 02:43 AM', 'Broken window glass with blood trace', 'Shoe print at rear exit'],
+        id: () => `G-${Math.floor(Math.random() * 10000)}`,
+        summary: 'Reported burglary at Kelvingrove Convenience Store. Alarm triggered at 02:42. Security footage confirms forced entry.',
+        description: 'Upon arrival, rear window was broken. Blood samples and a muddy footprint were recovered. Suspects fled on foot. No eyewitness of the suspect\'s face, but description of clothing provided.',
+        radio: 'Dispatch to unit, Code 45 in progress at Kelvingrove Market. Proceed with caution.',
+        evidence: [
+          { item: 'CCTV footage at 02:42 AM', image: 'https://via.placeholder.com/150?text=CCTV+Footage' },
+          { item: 'Blood sample (collected)', image: 'https://via.placeholder.com/150?text=Blood+Sample' },
+          { item: 'Mud footprint at rear exit', image: 'https://via.placeholder.com/150?text=Footprint' }
+        ],
         witnesses: [
-          'Store owner: "I got a call from the alarm company and arrived to see the door smashed in."',
-          'Neighbour: "Saw someone running in a hoodie right before police arrived."'
+          'Shopkeeper: "Alarm call woke me up. I found the door smashed in."',
+          'Neighbour: "I saw someone in a black hoodie sprinting toward the canal."'
         ],
         suspects: [
           {
-            name: 'Lewis McArthur',
-            photo: 'https://randomuser.me/api/portraits/men/32.jpg',
-            record: '2 prior arrests for burglary',
+            name: 'Callum Boyd',
+            photo: 'https://randomuser.me/api/portraits/men/45.jpg',
+            licenseId: `UK-${Math.floor(100000 + Math.random() * 900000)}`,
+            plate: `SG${Math.floor(100 + Math.random() * 899)} Z${Math.floor(100 + Math.random() * 899)}`,
+            record: '1 arrest for vandalism in 2023',
             warrant: false
           },
           {
-            name: 'Daniel Muir',
-            photo: 'https://randomuser.me/api/portraits/men/52.jpg',
+            name: 'Declan Fraser',
+            photo: 'https://randomuser.me/api/portraits/men/64.jpg',
+            licenseId: `UK-${Math.floor(100000 + Math.random() * 900000)}`,
+            plate: `G${Math.floor(100 + Math.random() * 899)} FTS`,
             record: 'Clean record',
             warrant: false
           }
@@ -78,44 +93,72 @@
       }
     ];
 
+    function eraseHistory() {
+      localStorage.clear();
+      alert('History erased.');
+      document.getElementById('officerName').value = '';
+    }
+
     function startGame() {
-      const name = document.getElementById('officerName').value;
-      if (!name) return alert('Please enter your officer name.');
+      let name = document.getElementById('officerName').value;
+      if (!name) {
+        name = localStorage.getItem('officerName');
+        if (!name) return alert('Enter your name or save it to play.');
+      } else {
+        localStorage.setItem('officerName', name);
+      }
 
       const modal = document.getElementById('introModal');
       modal.style.display = 'none';
       document.getElementById('mainGame').style.display = 'block';
 
-      const caseData = cases[0];
-      caseData.officer = name;
+      const chosen = caseTemplates[Math.floor(Math.random() * caseTemplates.length)];
+      const caseData = { ...chosen, id: chosen.id(), officer: name };
+      const doneCases = JSON.parse(localStorage.getItem('completedCases') || '[]');
+      doneCases.push(caseData.id);
+      localStorage.setItem('completedCases', JSON.stringify(doneCases));
 
       document.getElementById('caseDetails').innerHTML = `
         <strong>Case ID:</strong> ${caseData.id}<br>
-        <strong>Responding Officer:</strong> ${caseData.officer}<br>
-        <strong>Badge ID:</strong> ${caseData.badge}<br>
-        <strong>Description:</strong> ${caseData.summary}
+        <strong>Responding Officer:</strong> PC John Mackenzie<br>
+        <strong>Badge ID:</strong> C3421<br>
+        <strong>Description:</strong> ${caseData.description}
       `;
 
-      document.getElementById('evidenceList').innerHTML = caseData.evidence.map(e => `<li>${e}</li>`).join('');
-      document.getElementById('witnessStatements').innerHTML = caseData.witnesses.map(w => `<p class='mb-2'>"${w}"</p>`).join('');
+      document.getElementById('radioLog').innerText = caseData.radio;
+
+      document.getElementById('evidenceList').innerHTML = caseData.evidence.map(e =>
+        `<li class="mb-1">${e.item}<br><img src="${e.image}" alt="evidence" class="w-32 h-20 rounded mt-1"></li>`
+      ).join('');
+
+      document.getElementById('witnessStatements').innerHTML = caseData.witnesses.map(w => `<p class='mb-2'>${w}</p>`).join('');
 
       const suspectsDiv = document.getElementById('suspects');
+      suspectsDiv.innerHTML = '';
       caseData.suspects.forEach(s => {
-        const suspectCard = `
+        suspectsDiv.innerHTML += `
           <div class="bg-gray-700 p-3 rounded shadow">
             <img src="${s.photo}" alt="${s.name}" class="w-16 h-16 rounded-full mb-2">
             <p><strong>${s.name}</strong></p>
+            <p>License ID: ${s.licenseId}</p>
+            <p>Plate: ${s.plate}</p>
             <p>Record: ${s.record}</p>
             <p>Warrant: ${s.warrant ? 'Yes' : 'No'}</p>
             <button class="mt-2 bg-blue-500 px-2 py-1 rounded text-sm" onclick="interview('${s.name}')">Interview</button>
+            <button class="mt-2 bg-yellow-500 px-2 py-1 rounded text-sm ml-2" onclick="checkWarrant('${s.name}', '${s.licenseId}')">Search Warrant DB</button>
           </div>
         `;
-        suspectsDiv.innerHTML += suspectCard;
       });
     }
 
     function interview(name) {
-      alert(`Interview started with ${name}... (AI logic not implemented yet)`);
+      const q = prompt(`${name} is seated. Ask a question:`);
+      if (q) alert(`${name} responds: "I don’t recall being there. Maybe check your facts."`);
+    }
+
+    function checkWarrant(name, id) {
+      const match = Math.random() > 0.6;
+      alert(`License ID: ${id}\nWarrant Status: ${match ? 'Active' : 'None'}`);
     }
   </script>
 </body>
