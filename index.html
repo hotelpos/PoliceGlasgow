@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PoliceGlasgow: Police Simulator</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #1a202c; color: white; }
+    #map {
+      width: 100%;
+      height: 400px;
+      background: url('https://upload.wikimedia.org/wikipedia/commons/6/6a/Glasgow_map.png') no-repeat center center;
+      background-size: cover;
+      border: 2px solid #4A5568;
+    }
+    .terminal {
+      font-family: monospace;
+      background-color: #2D3748;
+      padding: 10px;
+      border-radius: 5px;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body class="p-6">
+  <h1 class="text-3xl font-bold mb-4">PoliceGlasgow: Police Simulator</h1>
+
+  <div id="map" class="mb-4"></div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <!-- Dispatch Radio -->
+    <div class="bg-gray-800 p-4 rounded">
+      <h2 class="text-xl font-semibold mb-2">📡 Dispatch</h2>
+      <div id="dispatchBox" class="terminal"></div>
+      <button onclick="sendDispatch()" class="mt-2 bg-blue-600 px-3 py-1 rounded">Receive Dispatch</button>
+    </div>
+
+    <!-- License Plate Lookup -->
+    <div class="bg-gray-800 p-4 rounded">
+      <h2 class="text-xl font-semibold mb-2">🔎 License Plate Check</h2>
+      <input type="text" id="plateInput" placeholder="Enter Plate (e.g., SC05 LND)" class="w-full p-2 mb-2 text-black">
+      <button onclick="lookupPlate()" class="bg-green-600 px-3 py-1 rounded">Lookup</button>
+      <div id="plateResult" class="mt-2 terminal"></div>
+    </div>
+  </div>
+
+  <script>
+    const dispatchMessages = [
+      "Control to Unit 7: Respond to noise complaint at Govan Rd.",
+      "Control to Unit 3: Possible stolen vehicle on Sauchiehall Street.",
+      "Control to Unit 12: Welfare check at St Enoch Square.",
+      "Control to Unit 5: RTC reported on M8 near Charing Cross.",
+    ];
+
+    function sendDispatch() {
+      const box = document.getElementById("dispatchBox");
+      const msg = dispatchMessages[Math.floor(Math.random() * dispatchMessages.length)];
+      box.innerHTML += `> ${msg}<br>`;
+      box.scrollTop = box.scrollHeight;
+
+      // Optional speech
+      const synth = window.speechSynthesis;
+      if (synth) {
+        const utter = new SpeechSynthesisUtterance(msg);
+        utter.lang = 'en-GB';
+        synth.speak(utter);
+      }
+    }
+
+    function lookupPlate() {
+      const plate = document.getElementById("plateInput").value.toUpperCase();
+      const result = document.getElementById("plateResult");
+
+      const records = {
+        "SC05 LND": { owner: "Jamie Fraser", status: "Valid", arrests: 0, warrants: "None" },
+        "GL15 PCT": { owner: "Moira MacDonald", status: "Expired MOT", arrests: 1, warrants: "Active Warrant - Theft" },
+        "GA62 LAW": { owner: "Craig Douglas", status: "Valid", arrests: 2, warrants: "None" },
+      };
+
+      if (records[plate]) {
+        const data = records[plate];
+        result.innerHTML = `
+          > Owner: ${data.owner}<br>
+          > Status: ${data.status}<br>
+          > Arrests: ${data.arrests}<br>
+          > Warrants: ${data.warrants}<br>
+        `;
+      } else {
+        result.innerHTML = "> No record found for that plate.";
+      }
+    }
+  </script>
+</body>
+</html>
